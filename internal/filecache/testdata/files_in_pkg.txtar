@@ -1,0 +1,14 @@
+# Expected files:
+lib/header.h
+lib/util.go
+lib/util2.go
+
+-- go.mod --
+module example.com/module
+
+go 1.13
+-- main.go --
+-- lib/header.h --
+-- lib/util.go --
+-- lib/util2.go --
+-- src/code.cpp --

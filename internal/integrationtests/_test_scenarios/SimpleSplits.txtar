@@ -1,0 +1,27 @@
+-- expected --
+splits:
+  one:
+    - one
+  two:
+    - two
+
+-- go.mod --
+module test.com/simple/splits
+
+-- .modularise.yaml --
+splits:
+  one:
+    includes:
+      - one
+  two:
+    includes:
+      - two
+
+-- unsplit/unsplit.go --
+package unsplit
+
+-- one/one.go --
+packager one
+
+-- two/two.go --
+package two

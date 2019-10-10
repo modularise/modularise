@@ -1,0 +1,49 @@
+-- expected --
+splits:
+  one:
+    - one
+    - one/subone
+    - one/two/onesubtwo
+  two:
+    - one/two
+  three:
+    - three
+
+-- go.mod --
+module test.com/complex/splits
+
+-- .modularise.yaml --
+splits:
+  one:
+    includes:
+      - one
+      - one/two/onesubtwo
+  two:
+    includes:
+      - one/two
+    excludes:
+      - one/two/excluded
+  three:
+    includes:
+      - three
+
+-- unsplit/unsplit.go --
+package unsplit
+
+-- one/subone/subone.go --
+package subone
+
+-- one/one.go --
+packager one
+
+-- one/two/two.go --
+package two
+
+-- one/two/excluded/excluded.go --
+package excluded
+
+-- one/two/onesubtwo/onesubtwo.go --
+package onesubtwo
+
+-- three/three.go --
+package three

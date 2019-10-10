@@ -1,0 +1,31 @@
+-- go.mod --
+module test.com/conflicting/residuals
+
+-- internal/shared/shared.go --
+package shared
+
+type ConflictingResidual struct{}
+
+type NonConflictingResidual struct{}
+
+-- one/one.go --
+package one
+
+import (
+	"test.com/conflicting/residuals/two"
+	"test.com/conflicting/residuals/internal/shared"
+)
+
+func One() {
+	_ = shared.NonConflictingResidual{}
+	two.Two(shared.ConflictingResidual{})
+}
+
+-- two/two.go --
+package two
+
+import "test.com/conflicting/residuals/internal/shared"
+
+func Two(_ shared.ConflictingResidual) {
+	_ = shared.NonConflictingResidual{}
+}

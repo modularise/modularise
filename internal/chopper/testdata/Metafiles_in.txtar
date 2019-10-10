@@ -1,0 +1,27 @@
+split:example.com/split
+root:lib
+file:lib/helper.go
+-- go.mod --
+module example.com/project
+
+go 1.13
+-- LICENCE --
+My first license
+-- license.md --
+My second license
+-- main.go --
+package main
+
+import "example.com/project/lib"
+
+func main() {
+	lib.PrintInteger()
+}
+-- lib/helper.go --
+package lib
+
+import "fmt"
+
+func PrintInteger() {
+	fmt.Println(0)
+}

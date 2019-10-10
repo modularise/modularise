@@ -1,0 +1,42 @@
+# We should not test 'src/code.cpp' via the filecache as there are no Go files in the 'src' directory.
+# Files to test:
+main.go
+lib/util.go
+lib/util2.go
+
+-- go.mod --
+module example.com/module
+
+go 1.13
+-- main.go --
+package main
+
+import "example.com/module/lib"
+
+func main() {
+    fmt.Println("Hello world!")
+}
+
+-- lib/header.h --
+# include <iostream>
+
+namespace { // anonymous
+std::istream my_stream = std::cin;
+} // anonymous
+
+-- lib/util.go --
+package lib
+
+var myString = "Hello world!"
+
+-- lib/util2.go --
+package lib
+
+import "fmt"
+
+func PrintHelloWorld() {
+    fmt.Println(myString)
+}
+
+-- src/code.cpp --
+foobar

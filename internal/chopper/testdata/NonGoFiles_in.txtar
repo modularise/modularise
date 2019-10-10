@@ -1,0 +1,33 @@
+split:example.com/split
+root:lib
+file:lib/helper.go
+file:lib/util.c
+file:lib/include/util.h
+-- go.mod --
+module example.com/project
+
+go 1.13
+-- main.go --
+package main
+
+import "example.com/project/lib"
+
+func main() {
+	lib.PrintInteger()
+}
+-- lib/helper.go --
+package lib
+
+import "fmt"
+
+func PrintInteger() {
+	fmt.Println(0)
+}
+-- lib/util.c --
+#include <iostream>
+
+void hello_world() {
+	std::cout << "Hello World" << std:endl;
+}
+-- lib/include/util.h --
+void hello_world();

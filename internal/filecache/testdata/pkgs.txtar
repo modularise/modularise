@@ -1,0 +1,14 @@
+# We should not find 'src' via the filecache as there are no Go files in the 'src' directory.
+# Expected packages:
+example.com/module
+example.com/module/lib
+
+-- go.mod --
+module example.com/module
+
+go 1.13
+-- main.go --
+-- lib/header.h --
+-- lib/util.go --
+-- lib/util2.go --
+-- src/code.cpp --

@@ -1,0 +1,90 @@
+split:example.com/split/v2
+root:internal/stringutils
+file:internal/stringutils/string.go
+residual:example.com/project/internal/random
+residual_root:internal
+-- go.mod --
+module example.com/project
+
+go 1.13
+-- main.go --
+package main
+
+import (
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
+
+	"example.com/project/internal/numberutils"
+	"example.com/project/internal/stringutils"
+)
+
+const defaultStringLength = 20
+
+func main() {
+	if len(os.Args) == 0 || len(os.Args) > 2 || (os.Args[1] == "number" && len(os.Args) == 2) {
+		fmt.Fprintln(os.Stderr, "Please specify either 'number' or 'string [integer]'.")
+		os.Exit(1)
+	}
+
+	switch strings.ToLower(os.Args[1]) {
+	case "string":
+		stringLength := defaultStringLength
+		if len(os.Args) == 2 {
+			var err error
+			stringLength, err = strconv.Atoi(os.Args[1])
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "Second argument following 'string' should be an integer.")
+				os.Exit(1)
+			}
+		}
+		stringutils.PrintRandomString(stringLength)
+	case "number":
+		numberutils.PrintRandomNumber()
+	default:
+	}
+}
+-- internal/numberutils/number.go --
+package numberutils
+
+import (
+	"fmt"
+
+	"example.com/project/internal/random"
+)
+
+func PrintRandomNumber() {
+	fmt.Println(random.GenerateRandomNumber())
+}
+-- internal/random/generate.go --
+package random
+
+import (
+	"math/rand"
+	"strings"
+)
+
+func GenerateRandomNumber() int {
+	return rand.Int()
+}
+
+func GenerateRandomString(length int) string {
+	res := &strings.Builder{}
+	for i := 0; i < length; i++ {
+		res.WriteByte(byte('a' + rand.Int()%26))
+	}
+	return res.String()
+}
+-- internal/stringutils/string.go --
+package stringutils
+
+import (
+	"fmt"
+
+	"example.com/project/internal/random"
+)
+
+func PrintRandomString(stringLenght int) {
+	fmt.Println(random.GenerateRandomString(stringLenght))
+}

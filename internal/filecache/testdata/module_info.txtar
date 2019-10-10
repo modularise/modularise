@@ -1,0 +1,7 @@
+{
+    "Path": "example.com/module"
+}
+-- go.mod --
+module example.com/module
+
+go 1.13
