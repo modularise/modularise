@@ -9,15 +9,15 @@ import (
 )
 
 func RunSplit(c *CLIConfig) error {
-	if err := repohandler.InitSplits(c.Logger, &c.Splits); err != nil {
-		return err
-	}
-
 	if err := parser.Parse(c.Logger, c.Filecache, &c.Splits); err != nil {
 		return err
 	}
 
 	if err := residuals.ComputeResiduals(c.Logger, c.Filecache, &c.Splits); err != nil {
+		return err
+	}
+
+	if err := repohandler.InitSplits(c.Logger, &c.Splits); err != nil {
 		return err
 	}
 

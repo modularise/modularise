@@ -34,6 +34,8 @@ type Split struct {
 // DataSplits contains information that is not part of the configuration of the splits but which is
 // filled in and used throughout the processing of the source code.
 type DataSplits struct {
+	// Indicates whether the source project is a Go Module itself.
+	NonModuleSource bool
 	// Filepath to split mapping.
 	PathToSplit map[string]*Split
 	// Go package name to split mapping.

@@ -136,7 +136,7 @@ func (c cleaver) copyFileToWorkDir(source string, residual bool) error {
 			return err
 		}
 		content = buf.Bytes()
-	} else {
+	} else if filepath.Base(source) != "go.mod" && filepath.Base(source) != "go.sum" {
 		var err error
 		content, err = c.fc.ReadFile(source)
 		if err != nil {

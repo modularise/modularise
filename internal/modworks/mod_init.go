@@ -17,14 +17,16 @@ import (
 )
 
 func CreateSplitModules(log *logrus.Logger, fc filecache.FileCache, sp *splits.Splits) error {
-	// Ensure the module-cache is preheated such that future runs of 'go mod tidy' can be done with
-	// only a temporary and partial local module proxy with split content.
-	log.Debugf("Pre-heating the module cache by running 'go mod tidy' on the source project at %q.", fc.Root())
-	cmd := exec.Command("go", "mod", "tidy")
-	cmd.Dir = fc.Root()
-	if out, err := cmd.CombinedOutput(); err != nil {
-		log.WithError(err).Errorf("Failed to run 'go mod tidy' on source project in %q. Output was:\n%s", fc.Root(), out)
-		return err
+	if !sp.NonModuleSource {
+		// Ensure the module-cache is preheated such that future runs of 'go mod tidy' can be done with
+		// only a temporary and partial local module proxy with split content.
+		log.Debugf("Pre-heating the module cache by running 'go mod tidy' on the source project at %q.", fc.Root())
+		cmd := exec.Command("go", "mod", "tidy")
+		cmd.Dir = fc.Root()
+		if out, err := cmd.CombinedOutput(); err != nil {
+			log.WithError(err).Errorf("Failed to run 'go mod tidy' on source project in %q. Output was:\n%s", fc.Root(), out)
+			return err
+		}
 	}
 
 	r, err := setupResolver(log, fc, sp)
@@ -52,10 +54,14 @@ type resolver struct {
 }
 
 func setupResolver(log *logrus.Logger, fc filecache.FileCache, sp *splits.Splits) (*resolver, error) {
-	sm := filepath.Join(fc.Root(), "go.mod")
-	smc, err := ioutil.ReadFile(sm)
-	if err != nil {
-		log.WithError(err).Errorf("Failed to read the source go.mod file at %q.", sm)
+	var err error
+	var smc []byte
+	if !sp.NonModuleSource {
+		sm := filepath.Join(fc.Root(), "go.mod")
+		smc, err = ioutil.ReadFile(sm)
+		if err != nil {
+			log.WithError(err).Errorf("Failed to read the source go.mod file at %q.", sm)
+		}
 	}
 
 	repo, err := git.PlainOpen(fc.Root())
@@ -125,21 +131,45 @@ func (r *resolver) createSplitModule(s *splits.Split, deps map[string]bool, stac
 }
 
 func (r *resolver) initSplitModule(s *splits.Split, deps map[string]bool) error {
-	// We need to change the module path in the source project's go.mod file before writing it to
-	// the split's working directory. We also need to add temporary local 'replace' statements for
-	// each of the splits in the transitive dependency set of the current one.
-	r.log.Debugf("Copying over source 'go.mod' from %q to split %q located at %q.", r.fc.ModulePath(), s.Name, s.WorkDir)
 	modFile := filepath.Join(s.WorkDir, "go.mod")
-	content := strings.Replace(r.mod, fmt.Sprintf("module %s", r.fc.ModulePath()), fmt.Sprintf("module %s", s.ModulePath), 1)
-	for sn := range deps {
-		r.log.Debugf("Adding a temporary 'require' statement for a dependency on split %q stored at %q.", sn, r.sp.Splits[sn].WorkDir)
-		content += fmt.Sprintf("\nreplace %s => %s %s", r.sp.Splits[sn].ModulePath, r.sp.Splits[sn].WorkDir, tempReplaceMarker)
+	if !r.sp.NonModuleSource {
+		// We need to change the module path in the source project's go.mod file before writing it to
+		// the split's working directory. We also need to add temporary local 'replace' statements for
+		// each of the splits in the transitive dependency set of the current one.
+		r.log.Debugf("Copying over source 'go.mod' from %q to split %q located at %q.", r.fc.ModulePath(), s.Name, s.WorkDir)
+		content := strings.Replace(r.mod, fmt.Sprintf("module %s", r.fc.ModulePath()), fmt.Sprintf("module %s", s.ModulePath), 1)
+		if err := ioutil.WriteFile(modFile, []byte(content), 0644); err != nil {
+			r.log.WithError(err).Errorf("Failed to write go.mod for split %q at %q.", s.Name, modFile)
+			return err
+		}
+	} else {
+		if _, err := os.Stat(modFile); err != nil && !os.IsNotExist(err) {
+			r.log.WithError(err).Errorf("Failed to determine whether a 'go.mod' file already exists in split %q in %q.", s.Name, s.WorkDir)
+			return err
+		} else if os.IsNotExist(err) {
+			cmd := exec.Command("go", "mod", "init", s.ModulePath)
+			cmd.Dir = s.WorkDir
+			if out, err := cmd.CombinedOutput(); err != nil {
+				r.log.WithError(err).Errorf("Failed to initialise Go module for split %q in %q. Output was:\n%s", s.Name, s.WorkDir, out)
+				return err
+			}
+		}
 	}
-	r.log.Debugf("New go.mod content for split %q is:\n%s", s.Name, content)
-	if err := ioutil.WriteFile(modFile, []byte(content), 0644); err != nil {
-		r.log.WithError(err).Errorf("Failed to write go.mod for split %q at %q.", s.Name, modFile)
+
+	fd, err := os.OpenFile(modFile, os.O_WRONLY|os.O_EXCL|os.O_APPEND, 0644)
+	if err != nil {
+		r.log.WithError(err).Errorf("Failed to open go.mod file at %q.", modFile)
 		return err
 	}
+	for sn := range deps {
+		r.log.Debugf("Adding a temporary 'require' statement for a dependency on split %q stored at %q.", sn, r.sp.Splits[sn].WorkDir)
+		_, err = fd.WriteString(fmt.Sprintf("\nreplace %s => %s %s", r.sp.Splits[sn].ModulePath, r.sp.Splits[sn].WorkDir, tempReplaceMarker))
+		if err != nil {
+			r.log.WithError(err).Errorf("Failed to append temporary 'replace' statement to go.mod at %q.", modFile)
+			return err
+		}
+	}
+	_ = fd.Close()
 
 	// Clean up the split's 'go.mod' to remove any unnecessary dependencies copied over from the
 	// source project.
@@ -150,11 +180,6 @@ func (r *resolver) initSplitModule(s *splits.Split, deps map[string]bool) error 
 
 	cmd := exec.Command("go", "mod", "tidy")
 	cmd.Dir = s.WorkDir
-	cmd.Env = append(
-		os.Environ(),
-		fmt.Sprintf("GONOSUMDB=%s", strings.Join(splitPaths, ",")),
-		fmt.Sprintf("GOPROXY=file://%s", r.localProxy),
-	)
 
 	r.log.Debugf("Pre-cleaning 'go mod tidy' on split %q located at %q using 'replace' statements.", s.Name, s.WorkDir)
 	if out, err := cmd.CombinedOutput(); err != nil {

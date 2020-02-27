@@ -34,6 +34,7 @@ func parseFiles(l *logrus.Logger, fc filecache.FileCache, sp *splits.Splits) err
 	if err != nil {
 		return err
 	}
+	sp.NonModuleSource = !files["go.mod"]
 
 	var mapping prefixMappings
 	for n, s := range sp.Splits {

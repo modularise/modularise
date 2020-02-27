@@ -78,7 +78,7 @@ func (r *resolver) cleanupGoMod(s *splits.Split) error {
 		fmt.Sprintf("GOPROXY=file://%s", r.localProxy),
 	)
 
-	r.log.Debugf("Pre-cleaning 'go mod tidy' on split %q located at %q using definitive versions.", s.Name, s.WorkDir)
+	r.log.Debugf("Running 'go mod tidy' on split %q located at %q using definitive versions.", s.Name, s.WorkDir)
 	out, err = cmd.CombinedOutput()
 	if err != nil {
 		r.log.WithError(err).Errorf("Failed to clean up go.mod for split in %q.\nOutput was:\n%s", s.WorkDir, out)
