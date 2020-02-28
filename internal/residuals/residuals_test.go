@@ -5,7 +5,6 @@ import (
 	"go/parser"
 	"go/token"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -19,13 +18,16 @@ import (
 func TestFile(t *testing.T) {
 	t.Parallel()
 
-	splitPkg := "example.com/pkg"
+	const (
+		testPkg   = "example.com/pkg"
+		testSplit = "test-split"
+	)
 	depSplit := &splits.Split{DataSplit: splits.DataSplit{Name: "split"}}
 
 	tcs := map[string]struct {
 		in         string
 		pkgTosplit map[string]*splits.Split
-		errTypes   []reflect.Type
+		errs       []residualError
 	}{
 		"InterfaceType": {
 			in: `package test
@@ -34,7 +36,7 @@ type MyInterface interface {
 	LocalMethod(LocalType) (LocalType, error)
 	ExternalMethod(pkg.ExternalType) (pkg.ExternalType, error)
 }`,
-			pkgTosplit: map[string]*splits.Split{splitPkg: depSplit},
+			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
 		},
 		"InterfaceTypeWithEmbedding": {
 			in: `package test
@@ -44,7 +46,7 @@ type MyInterface interface {
 
 	LocalMethod(LocalType) (LocalType, error)
 }`,
-			pkgTosplit: map[string]*splits.Split{splitPkg: depSplit},
+			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
 		},
 		"StructType": {
 			in: `package test
@@ -53,7 +55,7 @@ type MyStruct struct {
 	LocalField LocalType
 	ExternalField pkg.ExternalType
 }`,
-			pkgTosplit: map[string]*splits.Split{splitPkg: depSplit},
+			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
 		},
 		"StructTypeWithEmbedding": {
 			in: `package test
@@ -63,7 +65,7 @@ type MyStruct struct {
 
 	LocalField LocalType
 }`,
-			pkgTosplit: map[string]*splits.Split{splitPkg: depSplit},
+			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
 		},
 		"UnexportedFunc": {
 			in: `package test
@@ -76,70 +78,70 @@ func unexportedFunc(_ pkg.ExternalType) {}
 
 func ExportedFunc(_ pkg.ExternalType) {}
 `,
-			pkgTosplit: map[string]*splits.Split{splitPkg: depSplit},
+			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
 		},
 		"ExportedFuncNoSplit": {
 			in: `package test
 
 func ExportedFunc(_ pkg.ExternalType) {}
 `,
-			errTypes: []reflect.Type{reflect.TypeOf(nonSplitImportErr(""))},
+			errs: []residualError{&nonSplitImportErr{Split: testSplit, Pkg: testPkg, Symbol: "pkg.ExternalType", Loc: "3:21"}},
 		},
 		"TypeRedeclaration": {
 			in: `package test
 
 type LocalType pkg.ExportedType
 `,
-			pkgTosplit: map[string]*splits.Split{splitPkg: depSplit},
+			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
 		},
 		"TypeRedeclarationNonSplit": {
 			in: `package test
 
 type LocalType pkg.ExportedType
 `,
-			errTypes: []reflect.Type{reflect.TypeOf(nonSplitImportErr(""))},
+			errs: []residualError{&nonSplitImportErr{Split: testSplit, Pkg: testPkg, Symbol: "pkg.ExportedType", Loc: "3:16"}},
 		},
 		"TypeAlias": {
 			in: `package test
 
 type LocalType = pkg.ExportedType
 `,
-			pkgTosplit: map[string]*splits.Split{splitPkg: depSplit},
+			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
 		},
 		"TypeAliasNonSplit": {
 			in: `package test
 
 type LocalType = pkg.ExportedType
 `,
-			errTypes: []reflect.Type{reflect.TypeOf(nonSplitImportErr(""))},
+			errs: []residualError{&nonSplitImportErr{Split: testSplit, Pkg: testPkg, Symbol: "pkg.ExportedType", Loc: "3:18"}},
 		},
 		"GlobalExportedConstant": {
 			in: `package test
 
 const MyConst pkg.ExportedType = nil
 `,
-			pkgTosplit: map[string]*splits.Split{splitPkg: depSplit},
+			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
 		},
 		"GlobalExportedConstantNonSplit": {
 			in: `package test
 
 const MyConst pkg.ExportedType = nil
 `,
-			errTypes: []reflect.Type{reflect.TypeOf(nonSplitImportErr(""))},
+			errs: []residualError{&nonSplitImportErr{Split: testSplit, Pkg: testPkg, Symbol: "pkg.ExportedType", Loc: "3:15"}},
 		},
 		"GlobalExportedVariable": {
 			in: `package test
 
 var MyVar pkg.ExportedType
 `,
-			pkgTosplit: map[string]*splits.Split{splitPkg: depSplit},
+			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
 		},
 		"GlobalExportedVariableNonSplit": {
 			in: `package test
 
 var MyVar pkg.ExportedType
 `,
-			errTypes: []reflect.Type{reflect.TypeOf(nonSplitImportErr(""))},
+			errs: []residualError{&nonSplitImportErr{Split: testSplit, Pkg: testPkg, Symbol: "pkg.ExportedType", Loc: "3:11"}},
 		},
 	}
 
@@ -159,9 +161,9 @@ var MyVar pkg.ExportedType
 			a := &analyser{
 				log:     l,
 				fs:      token.NewFileSet(),
-				imports: map[string]string{"pkg": splitPkg},
-				pkgs:    map[string]bool{splitPkg: true},
-				s:       &splits.Split{DataSplit: splits.DataSplit{Name: "test-split"}},
+				imports: map[string]string{"pkg": testPkg},
+				pkgs:    map[string]bool{testPkg: true},
+				s:       &splits.Split{DataSplit: splits.DataSplit{Name: testSplit}},
 				sp:      &splits.Splits{DataSplits: splits.DataSplits{PkgToSplit: pkgToSplit}},
 			}
 			f, err := parser.ParseFile(a.fs, "", tc.in, parser.AllErrors|parser.ParseComments)
@@ -169,11 +171,7 @@ var MyVar pkg.ExportedType
 
 			a.analyseFile(f)
 
-			l.Debugf("DEBUG - %s: %v", t.Name(), a.errs)
-			testlib.True(t, true, len(tc.errTypes) == len(a.errs))
-			for i := range tc.errTypes {
-				testlib.True(t, false, reflect.TypeOf(a.errs[i]).ConvertibleTo(tc.errTypes[i]))
-			}
+			testlib.Equal(t, false, tc.errs, a.errs)
 		})
 	}
 }
@@ -181,13 +179,16 @@ var MyVar pkg.ExportedType
 func TestType(t *testing.T) {
 	t.Parallel()
 
-	splitPkg := "example.com/pkg"
+	const (
+		testPkg   = "example.com/pkg"
+		testSplit = "test-split"
+	)
 	depSplit := &splits.Split{DataSplit: splits.DataSplit{Name: "split"}}
 
 	tcs := map[string]struct {
 		in         string
 		pkgTosplit map[string]*splits.Split
-		errTypes   []reflect.Type
+		errs       []residualError
 	}{
 		"LocalExportedType": {
 			in: "LocalType",
@@ -197,24 +198,24 @@ func TestType(t *testing.T) {
 		},
 		"ExternalSplitExportedType": {
 			in:         "pkg.ExternalType",
-			pkgTosplit: map[string]*splits.Split{splitPkg: depSplit},
+			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
 		},
 		"ExternalSplitUnexportedType": {
 			in:         "pkg.externalType",
-			pkgTosplit: map[string]*splits.Split{splitPkg: depSplit},
-			errTypes:   []reflect.Type{reflect.TypeOf(unexpectedTypeErr(""))},
+			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
+			errs:       []residualError{&unexportedImportErr{Split: testSplit, Pkg: testPkg, Symbol: "pkg.externalType", Loc: "1:1"}},
 		},
 		"ExternalNonSplitExportedType": {
-			in:       "pkg.ExternalType",
-			errTypes: []reflect.Type{reflect.TypeOf(nonSplitImportErr(""))},
+			in:   "pkg.ExternalType",
+			errs: []residualError{&nonSplitImportErr{Split: testSplit, Pkg: testPkg, Symbol: "pkg.ExternalType", Loc: "1:1"}},
 		},
 		"ImpossibleNestedType": {
-			in:       "pkg.ExternalType.Field",
-			errTypes: []reflect.Type{reflect.TypeOf(unexpectedTypeErr(""))},
+			in:   "pkg.ExternalType.Field",
+			errs: []residualError{&unexpectedTypeErr{Split: testSplit, Symbol: "pkg.ExternalType.Field", Loc: "1:1"}},
 		},
 		"MapType": {
 			in:         `map[LocalType]pkg.ExternalType`,
-			pkgTosplit: map[string]*splits.Split{splitPkg: depSplit},
+			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
 		},
 		"StarType": {
 			in: "*LocalType",
@@ -230,7 +231,7 @@ func TestType(t *testing.T) {
 		},
 		"ComplexType": {
 			in:         "chan *([]*pkg.ExternalType)",
-			pkgTosplit: map[string]*splits.Split{splitPkg: depSplit},
+			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
 		},
 	}
 
@@ -250,8 +251,8 @@ func TestType(t *testing.T) {
 			a := &analyser{
 				log:     l,
 				fs:      token.NewFileSet(),
-				imports: map[string]string{"pkg": splitPkg},
-				pkgs:    map[string]bool{splitPkg: true},
+				imports: map[string]string{"pkg": testPkg},
+				pkgs:    map[string]bool{testPkg: true},
 				s:       &splits.Split{DataSplit: splits.DataSplit{Name: "test-split"}},
 				sp:      &splits.Splits{DataSplits: splits.DataSplits{PkgToSplit: pkgToSplit}},
 			}
@@ -260,10 +261,7 @@ func TestType(t *testing.T) {
 
 			a.analyseCompositeType(e)
 
-			testlib.True(t, true, len(tc.errTypes) == len(a.errs))
-			for i := range tc.errTypes {
-				testlib.True(t, false, reflect.TypeOf(a.errs[i]).ConvertibleTo(tc.errTypes[i]))
-			}
+			testlib.Equal(t, false, tc.errs, a.errs)
 		})
 	}
 }

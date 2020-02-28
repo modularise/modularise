@@ -2,7 +2,6 @@ package residuals
 
 import (
 	"errors"
-	"fmt"
 	"go/ast"
 	"go/printer"
 	"go/token"
@@ -14,24 +13,6 @@ import (
 	"github.com/Helcaraxan/modularise/internal/filecache"
 	"github.com/Helcaraxan/modularise/internal/splits"
 )
-
-type UnexpectedTypeErr error
-
-func unexpectedTypeErr(format string, a ...interface{}) UnexpectedTypeErr {
-	return fmt.Errorf(format, a...)
-}
-
-type UnexportedImportErr error
-
-func unexportedImportErr(format string, a ...interface{}) UnexportedImportErr {
-	return fmt.Errorf(format, a...)
-}
-
-type NonSplitImportErr error
-
-func nonSplitImportErr(format string, a ...interface{}) NonSplitImportErr {
-	return fmt.Errorf(format, a...)
-}
 
 func ComputeResiduals(l *logrus.Logger, fc filecache.FileCache, s *splits.Splits) error {
 	pkgs, err := fc.Pkgs()
@@ -50,13 +31,22 @@ func ComputeResiduals(l *logrus.Logger, fc filecache.FileCache, s *splits.Splits
 		}
 		if err := a.analyseSplit(); err != nil {
 			return err
+		} else if len(a.errs) == 0 {
+			continue
 		}
-		if len(a.errs) > 0 {
-			fail = true
-			l.Errorf("Detected errors while computing residuals for split %q:", v.Name)
-			for _, err := range a.errs {
-				l.Errorf(" - %v", err)
+
+		fail = true
+		msgs := map[string]bool{}
+		for _, err := range a.errs {
+			if l.GetLevel() < logrus.DebugLevel {
+				msgs[err.Error()] = true
+			} else {
+				msgs[err.Details()] = true
 			}
+		}
+		l.Errorf("Detected errors while computing residuals for split %q:", v.Name)
+		for msg := range msgs {
+			l.Errorf(" - %s", msg)
 		}
 	}
 
@@ -73,7 +63,7 @@ type analyser struct {
 	sp  *splits.Splits
 
 	// Fields used internally by the analyser.
-	errs    []error
+	errs    []residualError
 	fs      *token.FileSet
 	imports map[string]string
 	pkgs    map[string]bool
@@ -155,8 +145,13 @@ func (a *analyser) analyseFile(f *ast.File) {
 				for _, sp := range td.Specs {
 					tsp, ok := sp.(*ast.TypeSpec)
 					if !ok {
-						a.log.Errorf("Encountered an '%T' instead of an '*ast.TypeSpec' while analysing %q.", sp, a.fs.Position(f.Pos()))
-						a.errs = append(a.errs, unexpectedTypeErr("unexpected '%T' at %s", sp, a.fs.Position(sp.Pos())))
+						sb := strings.Builder{}
+						printer.Fprint(&sb, a.fs, sp)
+						a.errs = append(a.errs, &unexpectedTypeErr{
+							Split:  a.s.Name,
+							Symbol: sb.String(),
+							Loc:    a.fs.Position(sp.Pos()).String(),
+						})
 						continue
 					}
 					if tsp.Name.IsExported() {
@@ -167,8 +162,13 @@ func (a *analyser) analyseFile(f *ast.File) {
 				for _, sp := range td.Specs {
 					vs, ok := sp.(*ast.ValueSpec)
 					if !ok {
-						a.log.Errorf("Encountered an '%T' instead of an '*ast.ValueSpec' while analysing %q.", sp, a.fs.Position(f.Pos()))
-						a.errs = append(a.errs, unexpectedTypeErr("unexpected '%T' at %s", sp, a.fs.Position(sp.Pos())))
+						sb := strings.Builder{}
+						printer.Fprint(&sb, a.fs, sp)
+						a.errs = append(a.errs, &unexpectedTypeErr{
+							Split:  a.s.Name,
+							Symbol: sb.String(),
+							Loc:    a.fs.Position(sp.Pos()).String(),
+						})
 						continue
 					}
 					for _, n := range vs.Names {
@@ -248,27 +248,35 @@ func (a *analyser) analyseType(e ast.Expr) {
 			// nested types in Go.
 			sb := &strings.Builder{}
 			printer.Fprint(sb, a.fs, e)
-			a.errs = append(a.errs, unexpectedTypeErr("unexpected expression %s at %v", sb.String(), a.fs.Position(e.Pos())))
+			a.errs = append(a.errs, &unexpectedTypeErr{
+				Split:  a.s.Name,
+				Symbol: sb.String(),
+				Loc:    a.fs.Position(e.Pos()).String(),
+			})
 			break
 		}
 
 		if !te.Sel.IsExported() {
 			sb := &strings.Builder{}
 			printer.Fprint(sb, a.fs, e)
-			a.errs = append(a.errs, unexportedImportErr("external import of an unexported type %s (%s)", sb.String(), a.fs.Position(e.Pos())))
+			a.errs = append(a.errs, &unexportedImportErr{
+				Split:  a.s.Name,
+				Pkg:    a.imports[x.Name],
+				Symbol: sb.String(),
+				Loc:    a.fs.Position(e.Pos()).String(),
+			})
 		} else if a.pkgs[a.imports[x.Name]] {
 			if a.sp.PkgToSplit[a.imports[x.Name]] == nil {
 				sb := &strings.Builder{}
 				printer.Fprint(sb, a.fs, te)
 				a.errs = append(
 					a.errs,
-					nonSplitImportErr(
-						"public interface of split %q refers to %q from package %q at %q which is not part of any split",
-						a.s.Name,
-						sb.String(),
-						a.imports[x.Name],
-						a.fs.Position(x.Pos()),
-					),
+					&nonSplitImportErr{
+						Split:  a.s.Name,
+						Pkg:    a.imports[x.Name],
+						Symbol: sb.String(),
+						Loc:    a.fs.Position(x.Pos()).String(),
+					},
 				)
 			}
 		}
