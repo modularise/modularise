@@ -29,6 +29,10 @@ func RunSplit(c *CLIConfig) error {
 		return err
 	}
 
+	if c.DryRun {
+		return nil
+	}
+
 	if err := repohandler.PushSplits(c.Logger, &c.Splits); err != nil {
 		return err
 	}
