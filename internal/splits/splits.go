@@ -1,8 +1,12 @@
 package splits
 
-import "gopkg.in/src-d/go-git.v4"
+import (
+	"gopkg.in/src-d/go-git.v4"
+)
 
 type Splits struct {
+	// Authentication setup to clone / push Git repositories.
+	Credentials AuthConfig `yaml:"credentials"`
 	// Map of all configured splits.
 	Splits map[string]*Split `yaml:"splits"`
 
