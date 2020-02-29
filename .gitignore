@@ -1,3 +1,4 @@
 .vscode
 .go-test
+.go-golangci-lint
 modularise
