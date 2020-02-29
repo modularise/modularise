@@ -12,7 +12,7 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 
-	"github.com/Helcaraxan/modularise/internal/splits"
+	"github.com/modularise/modularise/internal/splits"
 )
 
 func (r *resolver) resolveSplitDeps(s *splits.Split) error {

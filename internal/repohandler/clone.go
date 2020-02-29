@@ -13,7 +13,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/cache"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 
-	"github.com/Helcaraxan/modularise/internal/splits"
+	"github.com/modularise/modularise/internal/splits"
 )
 
 func InitSplits(log *logrus.Logger, sp *splits.Splits) error {

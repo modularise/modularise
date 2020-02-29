@@ -7,8 +7,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/Helcaraxan/modularise/internal/filecache"
-	"github.com/Helcaraxan/modularise/internal/splits"
+	"github.com/modularise/modularise/internal/filecache"
+	"github.com/modularise/modularise/internal/splits"
 )
 
 func Parse(l *logrus.Logger, fc filecache.FileCache, sp *splits.Splits) error {

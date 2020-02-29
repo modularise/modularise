@@ -1,4 +1,4 @@
-module github.com/Helcaraxan/modularise
+module github.com/modularise/modularise
 
 go 1.13
 

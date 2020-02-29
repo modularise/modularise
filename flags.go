@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/Helcaraxan/modularise/cmd"
+	"github.com/modularise/modularise/cmd"
 )
 
 func attachGlobalFlags(command *cobra.Command, c *cmd.CLIConfig) {

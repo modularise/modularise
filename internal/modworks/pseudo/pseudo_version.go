@@ -13,7 +13,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 
-	"github.com/Helcaraxan/modularise/internal/splits"
+	"github.com/modularise/modularise/internal/splits"
 )
 
 type ProxyModuleInfo struct {

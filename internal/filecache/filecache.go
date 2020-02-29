@@ -4,8 +4,8 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.com/Helcaraxan/modularise/internal/filecache/testcache"
-	"github.com/Helcaraxan/modularise/internal/filecache/uncache"
+	"github.com/modularise/modularise/internal/filecache/testcache"
+	"github.com/modularise/modularise/internal/filecache/uncache"
 )
 
 // Ensure that we implement the required interface.

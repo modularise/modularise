@@ -7,7 +7,7 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/config"
 
-	"github.com/Helcaraxan/modularise/internal/splits"
+	"github.com/modularise/modularise/internal/splits"
 )
 
 func PushSplits(l *logrus.Logger, sp *splits.Splits) error {

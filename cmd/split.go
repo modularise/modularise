@@ -1,11 +1,11 @@
 package cmd
 
 import (
-	"github.com/Helcaraxan/modularise/internal/chopper"
-	"github.com/Helcaraxan/modularise/internal/modworks"
-	"github.com/Helcaraxan/modularise/internal/parser"
-	"github.com/Helcaraxan/modularise/internal/repohandler"
-	"github.com/Helcaraxan/modularise/internal/residuals"
+	"github.com/modularise/modularise/internal/chopper"
+	"github.com/modularise/modularise/internal/modworks"
+	"github.com/modularise/modularise/internal/parser"
+	"github.com/modularise/modularise/internal/repohandler"
+	"github.com/modularise/modularise/internal/residuals"
 )
 
 func RunSplit(c *CLIConfig) error {

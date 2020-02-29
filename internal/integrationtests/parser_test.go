@@ -11,10 +11,10 @@ import (
 	"github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v3"
 
-	"github.com/Helcaraxan/modularise/internal/filecache/uncache"
-	"github.com/Helcaraxan/modularise/internal/parser"
-	"github.com/Helcaraxan/modularise/internal/splits"
-	"github.com/Helcaraxan/modularise/internal/testlib"
+	"github.com/modularise/modularise/internal/filecache/uncache"
+	"github.com/modularise/modularise/internal/parser"
+	"github.com/modularise/modularise/internal/splits"
+	"github.com/modularise/modularise/internal/testlib"
 )
 
 type testSpec struct {

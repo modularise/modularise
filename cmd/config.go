@@ -13,9 +13,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
-	"github.com/Helcaraxan/modularise/internal/filecache"
-	"github.com/Helcaraxan/modularise/internal/filecache/uncache"
-	"github.com/Helcaraxan/modularise/internal/splits"
+	"github.com/modularise/modularise/internal/filecache"
+	"github.com/modularise/modularise/internal/filecache/uncache"
+	"github.com/modularise/modularise/internal/splits"
 )
 
 type CLIConfig struct {

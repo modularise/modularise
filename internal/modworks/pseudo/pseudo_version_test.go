@@ -9,9 +9,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/Helcaraxan/modularise/internal/splits"
-	"github.com/Helcaraxan/modularise/internal/testlib"
-	"github.com/Helcaraxan/modularise/internal/testrepo"
+	"github.com/modularise/modularise/internal/splits"
+	"github.com/modularise/modularise/internal/testlib"
+	"github.com/modularise/modularise/internal/testrepo"
 )
 
 func TestPseudoVersion(t *testing.T) {

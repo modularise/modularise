@@ -17,7 +17,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
 
-	"github.com/Helcaraxan/modularise/internal/testlib"
+	"github.com/modularise/modularise/internal/testlib"
 )
 
 type TestRepo struct {

@@ -11,8 +11,8 @@ import (
 	"golang.org/x/mod/module"
 	"golang.org/x/mod/zip"
 
-	"github.com/Helcaraxan/modularise/internal/modworks/pseudo"
-	"github.com/Helcaraxan/modularise/internal/splits"
+	"github.com/modularise/modularise/internal/modworks/pseudo"
+	"github.com/modularise/modularise/internal/splits"
 )
 
 func (r *resolver) populateLocalProxy(s *splits.Split) error {
