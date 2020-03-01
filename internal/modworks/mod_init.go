@@ -12,11 +12,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/src-d/go-git.v4"
 
+	"github.com/Helcaraxan/modularise/cmd/config"
 	"github.com/Helcaraxan/modularise/internal/filecache"
-	"github.com/Helcaraxan/modularise/internal/splits"
 )
 
-func CreateSplitModules(log *logrus.Logger, fc filecache.FileCache, sp *splits.Splits) error {
+func CreateSplitModules(log *logrus.Logger, fc filecache.FileCache, sp *config.Splits) error {
 	if !sp.NonModuleSource {
 		// Ensure the module-cache is preheated such that future runs of 'go mod tidy' can be done with
 		// only a temporary and partial local module proxy with split content.
@@ -45,7 +45,7 @@ func CreateSplitModules(log *logrus.Logger, fc filecache.FileCache, sp *splits.S
 type resolver struct {
 	log        *logrus.Logger
 	fc         filecache.FileCache
-	sp         *splits.Splits
+	sp         *config.Splits
 	mod        string
 	sourceVer  string
 	localProxy string
@@ -53,7 +53,7 @@ type resolver struct {
 	todo       map[string]bool
 }
 
-func setupResolver(log *logrus.Logger, fc filecache.FileCache, sp *splits.Splits) (*resolver, error) {
+func setupResolver(log *logrus.Logger, fc filecache.FileCache, sp *config.Splits) (*resolver, error) {
 	var err error
 	var smc []byte
 	if !sp.NonModuleSource {
@@ -96,7 +96,7 @@ func setupResolver(log *logrus.Logger, fc filecache.FileCache, sp *splits.Splits
 
 const tempReplaceMarker = "// modularise"
 
-func (r *resolver) createSplitModule(s *splits.Split, deps map[string]bool, stack []string) error {
+func (r *resolver) createSplitModule(s *config.Split, deps map[string]bool, stack []string) error {
 	// Prevent double-processing and detect circular dependencies between splits.
 	if r.done[s.Name] {
 		return nil
@@ -130,7 +130,7 @@ func (r *resolver) createSplitModule(s *splits.Split, deps map[string]bool, stac
 	return nil
 }
 
-func (r *resolver) initSplitModule(s *splits.Split, deps map[string]bool) error {
+func (r *resolver) initSplitModule(s *config.Split, deps map[string]bool) error {
 	modFile := filepath.Join(s.WorkDir, "go.mod")
 	if !r.sp.NonModuleSource {
 		// We need to change the module path in the source project's go.mod file before writing it to

@@ -13,6 +13,7 @@ import (
 	"github.com/rogpeppe/go-internal/txtar"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Helcaraxan/modularise/cmd/config"
 	"github.com/Helcaraxan/modularise/internal/filecache/testcache"
 	"github.com/Helcaraxan/modularise/internal/filecache/uncache"
 	"github.com/Helcaraxan/modularise/internal/splits"
@@ -70,8 +71,8 @@ func TestComputeSplitRoot(t *testing.T) {
 func TestRewriteImports(t *testing.T) {
 	t.Parallel()
 
-	depSplitA := &splits.Split{ModulePath: "split.com/root/a", DataSplit: splits.DataSplit{Name: "a", Root: "a", ResidualsRoot: "."}}
-	depSplitB := &splits.Split{ModulePath: "split.com/root/b", DataSplit: splits.DataSplit{Name: "b", Root: "b"}}
+	depSplitA := &config.Split{ModulePath: "split.com/root/a", DataSplit: splits.DataSplit{Name: "a", Root: "a", ResidualsRoot: "."}}
+	depSplitB := &config.Split{ModulePath: "split.com/root/b", DataSplit: splits.DataSplit{Name: "b", Root: "b"}}
 
 	importLiteral := func(i string) *ast.BasicLit {
 		return &ast.BasicLit{Value: fmt.Sprintf(`"%s"`, i)}
@@ -163,24 +164,24 @@ func TestRewriteImports(t *testing.T) {
 			a.Residuals = tc.residualsA
 			b := *depSplitB
 
-			sp := &splits.Splits{
-				Splits: map[string]*splits.Split{
+			sp := &config.Splits{
+				Splits: map[string]*config.Split{
 					a.Name:         &a,
 					depSplitB.Name: depSplitB,
 				},
 				DataSplits: splits.DataSplits{
-					PathToSplit: map[string]*splits.Split{
-						a.ModulePath:         &a,
-						depSplitB.ModulePath: depSplitB,
+					PathToSplit: map[string]string{
+						a.ModulePath:         a.Name,
+						depSplitB.ModulePath: depSplitB.Name,
 					},
-					PkgToSplit: map[string]*splits.Split{},
+					PkgToSplit: map[string]string{},
 				},
 			}
 			for _, pkg := range tc.pkgsA {
-				sp.PkgToSplit[pkg] = &a
+				sp.PkgToSplit[pkg] = a.Name
 			}
 			for _, pkg := range tc.pkgsB {
-				sp.PkgToSplit[pkg] = &b
+				sp.PkgToSplit[pkg] = b.Name
 			}
 
 			l := logrus.New()
@@ -250,16 +251,16 @@ func TestCleaveSplit(t *testing.T) {
 			err = os.MkdirAll(p, 0755)
 			testlib.NoError(t, true, err)
 
-			s := splits.Split{DataSplit: splits.DataSplit{
+			s := config.Split{DataSplit: splits.DataSplit{
 				Name:      "test-split",
 				Files:     map[string]bool{},
 				Residuals: map[string]bool{},
 				WorkDir:   p,
 			}}
-			sp := splits.Splits{
-				Splits: map[string]*splits.Split{"test": &s},
+			sp := config.Splits{
+				Splits: map[string]*config.Split{"test": &s},
 				DataSplits: splits.DataSplits{
-					PkgToSplit: map[string]*splits.Split{},
+					PkgToSplit: map[string]string{},
 				},
 			}
 
@@ -274,7 +275,7 @@ func TestCleaveSplit(t *testing.T) {
 				case strings.HasPrefix(l, "file:"):
 					f := strings.TrimSpace(strings.TrimPrefix(l, "file:"))
 					s.Files[f] = true
-					sp.PkgToSplit[filepath.Join(fc.ModulePath(), filepath.Dir(f))] = &s
+					sp.PkgToSplit[filepath.Join(fc.ModulePath(), filepath.Dir(f))] = s.Name
 				case strings.HasPrefix(l, "residual:"):
 					s.Residuals[strings.TrimSpace(strings.TrimPrefix(l, "residual:"))] = true
 				default:

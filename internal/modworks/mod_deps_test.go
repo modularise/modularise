@@ -12,6 +12,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Helcaraxan/modularise/cmd/config"
 	"github.com/Helcaraxan/modularise/internal/splits"
 	"github.com/Helcaraxan/modularise/internal/testlib"
 	"github.com/Helcaraxan/modularise/internal/testrepo"
@@ -44,7 +45,7 @@ func TestLocalProxy(t *testing.T) {
 	testlib.NoError(t, true, os.MkdirAll(wp, 0755))
 	testlib.NoError(t, true, ioutil.WriteFile(filepath.Join(wp, "go.mod"), []byte("module fake.com/mod\n\ngo 1.13\n"), 0644))
 
-	split := splits.Split{
+	split := config.Split{
 		ModulePath: "fake.com/dep",
 		DataSplit: splits.DataSplit{
 			Name:    "test-split",

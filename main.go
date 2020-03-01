@@ -7,10 +7,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/Helcaraxan/modularise/cmd"
+	"github.com/Helcaraxan/modularise/cmd/config"
 )
 
 func main() {
-	var c cmd.CLIConfig
+	var c config.CLIConfig
 	root := cobra.Command{
 		Use: "modularise",
 		PersistentPreRunE: func(_ *cobra.Command, args []string) error {
@@ -32,7 +33,7 @@ func main() {
 	}
 }
 
-func checkCmd(c *cmd.CLIConfig) *cobra.Command {
+func checkCmd(c *config.CLIConfig) *cobra.Command {
 	check := &cobra.Command{
 		Use: "check",
 		RunE: func(_ *cobra.Command, _ []string) error {
@@ -43,7 +44,7 @@ func checkCmd(c *cmd.CLIConfig) *cobra.Command {
 	return check
 }
 
-func splitCmd(c *cmd.CLIConfig) *cobra.Command {
+func splitCmd(c *config.CLIConfig) *cobra.Command {
 	split := &cobra.Command{
 		Use: "split",
 		RunE: func(_ *cobra.Command, _ []string) error {

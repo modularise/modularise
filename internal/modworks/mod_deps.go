@@ -12,10 +12,10 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 
-	"github.com/Helcaraxan/modularise/internal/splits"
+	"github.com/Helcaraxan/modularise/cmd/config"
 )
 
-func (r *resolver) resolveSplitDeps(s *splits.Split) error {
+func (r *resolver) resolveSplitDeps(s *config.Split) error {
 	if err := r.cleanupGoMod(s); err != nil {
 		return err
 	}
@@ -26,7 +26,7 @@ func (r *resolver) resolveSplitDeps(s *splits.Split) error {
 	return nil
 }
 
-func (r *resolver) cleanupGoMod(s *splits.Split) error {
+func (r *resolver) cleanupGoMod(s *config.Split) error {
 	r.log.Debugf("Cleaning up go.mod for split %q located in %q.", s.Name, s.WorkDir)
 
 	c, err := ioutil.ReadFile(filepath.Join(s.WorkDir, "go.mod"))
@@ -87,7 +87,7 @@ func (r *resolver) cleanupGoMod(s *splits.Split) error {
 	return nil
 }
 
-func (r *resolver) commitChanges(s *splits.Split) error {
+func (r *resolver) commitChanges(s *config.Split) error {
 	if s.Repo == nil {
 		r.log.Errorf("Attempting to push new content for split %q in %q without having initialised a repository.", s.Name, s.WorkDir)
 		return fmt.Errorf("split %q in %q has no initialised repository", s.Name, s.WorkDir)

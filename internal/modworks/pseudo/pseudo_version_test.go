@@ -9,6 +9,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Helcaraxan/modularise/cmd/config"
 	"github.com/Helcaraxan/modularise/internal/splits"
 	"github.com/Helcaraxan/modularise/internal/testlib"
 	"github.com/Helcaraxan/modularise/internal/testrepo"
@@ -86,7 +87,7 @@ func TestPseudoVersion(t *testing.T) {
 			l.SetLevel(logrus.DebugLevel)
 			l.ReportCaller = true
 
-			info, err := Version(l, &splits.Split{
+			info, err := Version(l, &config.Split{
 				ModulePath: tc.module,
 				DataSplit: splits.DataSplit{
 					WorkDir: repo.Path(),
@@ -198,7 +199,7 @@ func TestBaseVersionForCommit(t *testing.T) {
 
 			bv, err := versioner{
 				log: l,
-				s: &splits.Split{
+				s: &config.Split{
 					DataSplit: splits.DataSplit{
 						WorkDir: repo.Path(),
 						Repo:    repo.Repository(),
@@ -308,7 +309,7 @@ func TestTagsForMajor(t *testing.T) {
 
 			tags, err := versioner{
 				log: l,
-				s: &splits.Split{
+				s: &config.Split{
 					DataSplit: splits.DataSplit{
 						WorkDir: repo.Path(),
 						Repo:    repo.Repository(),

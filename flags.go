@@ -3,10 +3,10 @@ package main
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/Helcaraxan/modularise/cmd"
+	"github.com/Helcaraxan/modularise/cmd/config"
 )
 
-func attachGlobalFlags(command *cobra.Command, c *cmd.CLIConfig) {
+func attachGlobalFlags(command *cobra.Command, c *config.CLIConfig) {
 	command.PersistentFlags().StringVarP(
 		&c.ConfigFile,
 		"configuration",
@@ -23,7 +23,7 @@ func attachGlobalFlags(command *cobra.Command, c *cmd.CLIConfig) {
 	)
 }
 
-func attachSplitFlags(command *cobra.Command, c *cmd.CLIConfig) {
+func attachSplitFlags(command *cobra.Command, c *config.CLIConfig) {
 	command.Flags().BoolVarP(
 		&c.DryRun,
 		"dry-run",

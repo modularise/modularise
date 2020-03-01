@@ -7,29 +7,29 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Helcaraxan/modularise/cmd/config"
 	"github.com/Helcaraxan/modularise/internal/filecache"
-	"github.com/Helcaraxan/modularise/internal/splits"
 )
 
-func Parse(l *logrus.Logger, fc filecache.FileCache, sp *splits.Splits) error {
+func Parse(l *logrus.Logger, fc filecache.FileCache, sp *config.Splits) error {
 	if err := parseFiles(l, fc, sp); err != nil {
 		return err
 	}
 
-	sp.PkgToSplit = map[string]*splits.Split{}
-	sp.PathToSplit = map[string]*splits.Split{}
+	sp.PkgToSplit = map[string]string{}
+	sp.PathToSplit = map[string]string{}
 	for _, s := range sp.Splits {
-		sp.PathToSplit[s.ModulePath] = s
+		sp.PathToSplit[s.ModulePath] = s.Name
 
 		for f := range s.Files {
 			pkg := filepath.Join(fc.ModulePath(), filepath.Dir(f))
-			sp.PkgToSplit[pkg] = s
+			sp.PkgToSplit[pkg] = s.Name
 		}
 	}
 	return nil
 }
 
-func parseFiles(l *logrus.Logger, fc filecache.FileCache, sp *splits.Splits) error {
+func parseFiles(l *logrus.Logger, fc filecache.FileCache, sp *config.Splits) error {
 	files, err := fc.Files()
 	if err != nil {
 		return err

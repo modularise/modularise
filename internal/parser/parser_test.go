@@ -5,8 +5,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Helcaraxan/modularise/cmd/config"
 	"github.com/Helcaraxan/modularise/internal/filecache/testcache"
-	"github.com/Helcaraxan/modularise/internal/splits"
 	"github.com/Helcaraxan/modularise/internal/testlib"
 )
 
@@ -17,7 +17,7 @@ func TestUnit_ParseUnit(t *testing.T) {
 
 	tcs := map[string]struct {
 		files    map[string]testcache.FakeFileCacheEntry
-		splits   splits.Splits
+		splits   config.Splits
 		expected map[string]map[string]bool
 	}{
 		"NoSplit": {
@@ -25,7 +25,7 @@ func TestUnit_ParseUnit(t *testing.T) {
 				"go.mod": goMod,
 				"one.go": {},
 			},
-			splits:   splits.Splits{Splits: map[string]*splits.Split{}},
+			splits:   config.Splits{Splits: map[string]*config.Split{}},
 			expected: map[string]map[string]bool{},
 		},
 		"OneSplitOneFile": {
@@ -33,7 +33,7 @@ func TestUnit_ParseUnit(t *testing.T) {
 				"go.mod":     goMod,
 				"one/one.go": {},
 			},
-			splits: splits.Splits{Splits: map[string]*splits.Split{
+			splits: config.Splits{Splits: map[string]*config.Split{
 				"one": {Includes: []string{"one"}},
 			}},
 			expected: map[string]map[string]bool{
@@ -45,7 +45,7 @@ func TestUnit_ParseUnit(t *testing.T) {
 				"go.mod": goMod,
 				"one.go": {},
 			},
-			splits: splits.Splits{Splits: map[string]*splits.Split{
+			splits: config.Splits{Splits: map[string]*config.Split{
 				"one": {Includes: []string{"one"}},
 			}},
 			expected: map[string]map[string]bool{
@@ -59,7 +59,7 @@ func TestUnit_ParseUnit(t *testing.T) {
 				"one/one.go":             {},
 				"one/ignored/ignored.go": {},
 			},
-			splits: splits.Splits{Splits: map[string]*splits.Split{
+			splits: config.Splits{Splits: map[string]*config.Split{
 				"one": {
 					Includes: []string{"one"},
 					Excludes: []string{"one/ignored"},
@@ -75,7 +75,7 @@ func TestUnit_ParseUnit(t *testing.T) {
 				"one/one.go":     {},
 				"one/two/two.go": {},
 			},
-			splits: splits.Splits{Splits: map[string]*splits.Split{
+			splits: config.Splits{Splits: map[string]*config.Split{
 				"one": {Includes: []string{"one"}},
 				"two": {Includes: []string{"one/two"}},
 			}},
@@ -91,7 +91,7 @@ func TestUnit_ParseUnit(t *testing.T) {
 				"one/two/two.go":     {},
 				"one/two/one/one.go": {},
 			},
-			splits: splits.Splits{Splits: map[string]*splits.Split{
+			splits: config.Splits{Splits: map[string]*config.Split{
 				"one": {Includes: []string{
 					"one",
 					"one/two/one",

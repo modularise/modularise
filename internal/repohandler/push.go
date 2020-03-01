@@ -7,10 +7,10 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 	gitconfig "gopkg.in/src-d/go-git.v4/config"
 
-	"github.com/Helcaraxan/modularise/internal/splits"
+	modularise_config "github.com/Helcaraxan/modularise/cmd/config"
 )
 
-func PushSplits(log *logrus.Logger, sp *splits.Splits) error {
+func PushSplits(log *logrus.Logger, sp *modularise_config.Splits) error {
 	for _, s := range sp.Splits {
 		if s.Repo == nil {
 			log.Errorf("Attempting to push new content for split %q in %q without having initialised a repository.", s.Name, s.WorkDir)

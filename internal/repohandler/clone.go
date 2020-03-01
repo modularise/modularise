@@ -17,7 +17,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 
-	"github.com/Helcaraxan/modularise/internal/splits"
+	"github.com/Helcaraxan/modularise/cmd/config"
 )
 
 const (
@@ -25,7 +25,7 @@ const (
 	defaultRemoteName = "origin"
 )
 
-func InitSplits(log *logrus.Logger, sp *splits.Splits) error {
+func InitSplits(log *logrus.Logger, sp *config.Splits) error {
 	if err := initWorkTree(log, sp); err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ func InitSplits(log *logrus.Logger, sp *splits.Splits) error {
 	return nil
 }
 
-func initWorkTree(log *logrus.Logger, sp *splits.Splits) error {
+func initWorkTree(log *logrus.Logger, sp *config.Splits) error {
 	if sp.WorkTree == "" {
 		td, err := ioutil.TempDir("", "modularise-splits")
 		if err != nil {
@@ -66,7 +66,7 @@ func initWorkTree(log *logrus.Logger, sp *splits.Splits) error {
 	return nil
 }
 
-func initSplitDir(log *logrus.Logger, s *splits.Split) error {
+func initSplitDir(log *logrus.Logger, s *config.Split) error {
 	if _, err := os.Stat(s.WorkDir); err == nil {
 		log.Errorf("Can not use directory %q to store data for split %q as it already exists.", s.WorkDir, s.Name)
 		return fmt.Errorf("directory %q already exists", s.WorkDir)
@@ -84,7 +84,7 @@ func initSplitDir(log *logrus.Logger, s *splits.Split) error {
 	return nil
 }
 
-func cloneRepository(log *logrus.Logger, s *splits.Split, sp *splits.Splits) error {
+func cloneRepository(log *logrus.Logger, s *config.Split, sp *config.Splits) error {
 	if s.URL == "" {
 		log.Infof("No remote configured for split %q. It won't be synced to a Git repository but its content will be stored at %q.", s.Name, s.WorkDir)
 		return initRepository(log, s)
@@ -149,7 +149,7 @@ func cloneRepository(log *logrus.Logger, s *splits.Split, sp *splits.Splits) err
 	return nil
 }
 
-func initRepository(log *logrus.Logger, s *splits.Split) error {
+func initRepository(log *logrus.Logger, s *config.Split) error {
 	r, err := git.Init(filesystem.NewStorage(osfs.New(filepath.Join(s.WorkDir, ".git")), cache.NewObjectLRUDefault()), osfs.New(s.WorkDir))
 	if err != nil {
 		log.WithError(err).Errorf("Failed to initialise a new git repository in %q.", s.WorkDir)

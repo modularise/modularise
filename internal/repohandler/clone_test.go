@@ -10,6 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/src-d/go-git.v4"
 
+	"github.com/Helcaraxan/modularise/cmd/config"
 	"github.com/Helcaraxan/modularise/internal/splits"
 	"github.com/Helcaraxan/modularise/internal/testlib"
 	"github.com/Helcaraxan/modularise/internal/testrepo"
@@ -45,7 +46,7 @@ func TestInitRepository(t *testing.T) {
 			logger.SetLevel(logrus.DebugLevel)
 			logger.SetReportCaller(true)
 
-			err = initRepository(logger, &splits.Split{
+			err = initRepository(logger, &config.Split{
 				Branch: tc.config,
 				DataSplit: splits.DataSplit{
 					Name:    "a",
@@ -85,10 +86,10 @@ func TestCloneRepository(t *testing.T) {
 
 	testlib.NoError(t, true, os.Mkdir(filepath.Join(td, "target"), 0755))
 
-	err = cloneRepository(logger, &splits.Split{
+	err = cloneRepository(logger, &config.Split{
 		URL:       fmt.Sprintf("file://%s", tr.Path()),
 		DataSplit: splits.DataSplit{Name: "test-split", WorkDir: filepath.Join(td, "target")},
-	}, &splits.Splits{})
+	}, &config.Splits{})
 	testlib.NoError(t, true, err)
 
 	r, err := git.PlainOpen(filepath.Join(td, "target"))
@@ -108,9 +109,9 @@ func TestInitWorkTree(t *testing.T) {
 	t.Run("New", func(t *testing.T) {
 		t.Parallel()
 
-		sp := splits.Splits{Splits: map[string]*splits.Split{}}
+		sp := config.Splits{Splits: map[string]*config.Split{}}
 		for _, sn := range sns {
-			sp.Splits[sn] = &splits.Split{DataSplit: splits.DataSplit{Name: sn}}
+			sp.Splits[sn] = &config.Split{DataSplit: splits.DataSplit{Name: sn}}
 		}
 
 		testInitWorkTree(t, &sp)
@@ -119,9 +120,9 @@ func TestInitWorkTree(t *testing.T) {
 	t.Run("New", func(t *testing.T) {
 		t.Parallel()
 
-		sp := splits.Splits{Splits: map[string]*splits.Split{}}
+		sp := config.Splits{Splits: map[string]*config.Split{}}
 		for _, sn := range sns {
-			sp.Splits[sn] = &splits.Split{DataSplit: splits.DataSplit{Name: sn}}
+			sp.Splits[sn] = &config.Split{DataSplit: splits.DataSplit{Name: sn}}
 		}
 
 		td, err := ioutil.TempDir("", "modularise-test-worktree")
@@ -135,7 +136,7 @@ func TestInitWorkTree(t *testing.T) {
 	})
 }
 
-func testInitWorkTree(t *testing.T, sp *splits.Splits) {
+func testInitWorkTree(t *testing.T, sp *config.Splits) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 	logger.SetReportCaller(true)

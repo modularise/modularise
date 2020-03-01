@@ -1,4 +1,4 @@
-package splits
+package config
 
 import (
 	"io/ioutil"

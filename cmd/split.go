@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/Helcaraxan/modularise/cmd/config"
 	"github.com/Helcaraxan/modularise/internal/chopper"
 	"github.com/Helcaraxan/modularise/internal/modworks"
 	"github.com/Helcaraxan/modularise/internal/parser"
@@ -8,7 +9,7 @@ import (
 	"github.com/Helcaraxan/modularise/internal/residuals"
 )
 
-func RunSplit(c *CLIConfig) error {
+func RunSplit(c *config.CLIConfig) error {
 	if err := parser.Parse(c.Logger, c.Filecache, &c.Splits); err != nil {
 		return err
 	}

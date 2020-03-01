@@ -13,11 +13,11 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Helcaraxan/modularise/cmd/config"
 	"github.com/Helcaraxan/modularise/internal/filecache"
-	"github.com/Helcaraxan/modularise/internal/splits"
 )
 
-func CleaveSplits(log *logrus.Logger, fc filecache.FileCache, sp *splits.Splits) error {
+func CleaveSplits(log *logrus.Logger, fc filecache.FileCache, sp *config.Splits) error {
 	for _, s := range sp.Splits {
 		s.Root = computeSplitRoot(s.Files)
 		log.Debugf("Computed root %q for split %q containing files %v.", s.Root, s.Name, s.Files)
@@ -77,8 +77,8 @@ func computeSplitRoot(fs map[string]bool) string {
 type cleaver struct {
 	log *logrus.Logger
 	fc  filecache.FileCache
-	s   *splits.Split
-	sp  *splits.Splits
+	s   *config.Split
+	sp  *config.Splits
 }
 
 func (c cleaver) cleaveSplit() error {
@@ -163,8 +163,9 @@ func (c cleaver) copyFileToWorkDir(source string, residual bool) error {
 func (c cleaver) rewriteImports(a *ast.File) {
 	for _, imp := range a.Imports {
 		p := strings.Trim(imp.Path.Value, `"`)
-		if c.sp.PkgToSplit[p] != nil {
-			p = strings.Replace(p, filepath.Join(c.fc.ModulePath(), c.sp.PkgToSplit[p].Root), c.sp.PkgToSplit[p].ModulePath, 1)
+		if c.sp.PkgToSplit[p] != "" {
+			ts := c.sp.Splits[c.sp.PkgToSplit[p]]
+			p = strings.Replace(p, filepath.Join(c.fc.ModulePath(), ts.Root), ts.ModulePath, 1)
 		} else if c.s.Residuals[p] {
 			rp := strings.Join([]string{c.fc.ModulePath(), c.s.Root, ""}, "/")
 			if strings.HasPrefix(p, rp) && internalPathRE.MatchString(strings.TrimPrefix(p, rp)) {

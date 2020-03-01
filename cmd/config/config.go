@@ -1,4 +1,4 @@
-package cmd
+package config
 
 import (
 	"context"
@@ -15,7 +15,6 @@ import (
 
 	"github.com/Helcaraxan/modularise/internal/filecache"
 	"github.com/Helcaraxan/modularise/internal/filecache/uncache"
-	"github.com/Helcaraxan/modularise/internal/splits"
 )
 
 type CLIConfig struct {
@@ -39,7 +38,7 @@ type CLIConfig struct {
 type cliConfigData struct {
 	Logger    *logrus.Logger
 	Filecache filecache.FileCache
-	Splits    splits.Splits
+	Splits    Splits
 }
 
 func (c *CLIConfig) CheckConfig() error {

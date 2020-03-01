@@ -4,46 +4,15 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 )
 
-type Splits struct {
-	// Authentication setup to clone / push Git repositories.
-	Credentials AuthConfig `yaml:"credentials"`
-	// Map of all configured splits.
-	Splits map[string]*Split `yaml:"splits"`
-
-	// Internal state.
-	DataSplits
-}
-
-type Split struct {
-	// Module path for the split
-	ModulePath string
-	// List of paths relative to the source module's root. Any Go packages below these paths will be
-	// made part of this split, unless:
-	// - they are explicitly exluded by a longer prefix path in the Excludes list.
-	// - they are explicitly included in another split.
-	Includes []string `yaml:"includes"`
-	// List of paths relative to the source module's root. Any Go packages below these paths will
-	// not be made part of this split, unless they are explicitly included by a longer prefix path
-	// in the Includes list.
-	Excludes []string `yaml:"excludes"`
-	// URL of the Git VCS where this split resides.
-	URL string
-	// Branch on the remote VCS that should be cloned from / pushed to for split content.
-	Branch string
-
-	// Internal state.
-	DataSplit
-}
-
 // DataSplits contains information that is not part of the configuration of the splits but which is
 // filled in and used throughout the processing of the source code.
 type DataSplits struct {
 	// Indicates whether the source project is a Go Module itself.
 	NonModuleSource bool
 	// Filepath to split mapping.
-	PathToSplit map[string]*Split
+	PathToSplit map[string]string
 	// Go package name to split mapping.
-	PkgToSplit map[string]*Split
+	PkgToSplit map[string]string
 	// Directory under which all split work will be done and stored.
 	WorkTree string
 }

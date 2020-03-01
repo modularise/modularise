@@ -11,9 +11,9 @@ import (
 	"github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v3"
 
+	"github.com/Helcaraxan/modularise/cmd/config"
 	"github.com/Helcaraxan/modularise/internal/filecache/uncache"
 	"github.com/Helcaraxan/modularise/internal/parser"
-	"github.com/Helcaraxan/modularise/internal/splits"
 	"github.com/Helcaraxan/modularise/internal/testlib"
 )
 
@@ -96,7 +96,7 @@ func (s *testSpec) run() {
 	r, err := ioutil.ReadFile(".modularise.yaml")
 	testlib.NoError(s.t, true, err)
 
-	var sp splits.Splits
+	var sp config.Splits
 	err = yaml.Unmarshal(r, &sp)
 	testlib.NoError(s.t, true, err)
 	testlib.NotNil(s.t, true, sp.Splits)

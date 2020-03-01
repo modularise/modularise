@@ -10,11 +10,11 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Helcaraxan/modularise/cmd/config"
 	"github.com/Helcaraxan/modularise/internal/filecache"
-	"github.com/Helcaraxan/modularise/internal/splits"
 )
 
-func ComputeResiduals(l *logrus.Logger, fc filecache.FileCache, s *splits.Splits) error {
+func ComputeResiduals(l *logrus.Logger, fc filecache.FileCache, s *config.Splits) error {
 	pkgs, err := fc.Pkgs()
 	if err != nil {
 		return err
@@ -59,8 +59,8 @@ func ComputeResiduals(l *logrus.Logger, fc filecache.FileCache, s *splits.Splits
 type analyser struct {
 	log *logrus.Logger
 	fc  filecache.FileCache
-	s   *splits.Split
-	sp  *splits.Splits
+	s   *config.Split
+	sp  *config.Splits
 
 	// Fields used internally by the analyser.
 	errs    []residualError
@@ -118,14 +118,16 @@ func (a *analyser) computeSplitDepsAndResiduals(imports []*ast.ImportSpec) error
 		}
 		a.imports[n] = p
 
-		if pkgs[p] {
-			if ts := a.sp.PkgToSplit[p]; ts != nil && ts.Name != a.s.Name {
-				a.log.Debugf("Import of %q induces a dependency from split %q on split %q.", imp.Path.Value, a.s.Name, ts.Name)
-				a.s.SplitDeps[ts.Name] = true
-			} else if ts == nil {
-				a.log.Debugf("Import of %q results in the package being a residual of split %q.", imp.Path.Value, a.s.Name)
-				a.s.Residuals[p] = true
-			}
+		if !pkgs[p] {
+			continue
+		}
+
+		if ts := a.sp.PkgToSplit[p]; ts != "" && ts != a.s.Name {
+			a.log.Debugf("Import of %q induces a dependency from split %q on split %q.", imp.Path.Value, a.s.Name, ts)
+			a.s.SplitDeps[ts] = true
+		} else if ts == "" {
+			a.log.Debugf("Import of %q results in the package being a residual of split %q.", imp.Path.Value, a.s.Name)
+			a.s.Residuals[p] = true
 		}
 	}
 	return nil
@@ -266,7 +268,7 @@ func (a *analyser) analyseType(e ast.Expr) {
 				Loc:    a.fs.Position(e.Pos()).String(),
 			})
 		} else if a.pkgs[a.imports[x.Name]] {
-			if a.sp.PkgToSplit[a.imports[x.Name]] == nil {
+			if a.sp.PkgToSplit[a.imports[x.Name]] == "" {
 				sb := &strings.Builder{}
 				printer.Fprint(sb, a.fs, te)
 				a.errs = append(
@@ -318,28 +320,29 @@ func (a *analyser) computeIndirectDependencies() error {
 			if a.s.Residuals[p] {
 				a.log.Debugf("Skipping as the package is already a residual of split %q.", a.s.Name)
 				continue
+			} else if !a.pkgs[p] {
+				continue
 			}
 
-			if a.pkgs[p] {
-				if ts := a.sp.PkgToSplit[p]; ts != nil {
-					if ts != a.s {
-						a.log.Debugf("Import of %q results in a dependency from split %q on split %q.", p, a.s.Name, ts.Name)
-						a.s.SplitDeps[ts.Name] = true
-					}
-					continue
-				}
+			if ts := a.sp.PkgToSplit[p]; ts == a.s.Name {
+				a.log.Debugf("Import of %q is internal to split %q.", p, ts)
+				continue
+			} else if ts != "" {
+				a.log.Debugf("Import of %q results in a dependency from split %q on split %q.", p, a.s.Name, ts)
+				a.s.SplitDeps[ts] = true
+				continue
+			}
 
-				a.log.Debugf("Import of %q results in it becoming a residual of split %q.", p, a.s.Name)
-				a.s.Residuals[p] = true
+			a.log.Debugf("Import of %q results in it becoming a residual of split %q.", p, a.s.Name)
+			a.s.Residuals[p] = true
 
-				pkgFiles, err := a.fc.FilesInPkg(p)
-				if err != nil {
-					return err
-				}
-				for f := range pkgFiles {
-					if filepath.Ext(f) == ".go" {
-						todo = append(todo, f)
-					}
+			pkgFiles, err := a.fc.FilesInPkg(p)
+			if err != nil {
+				return err
+			}
+			for f := range pkgFiles {
+				if filepath.Ext(f) == ".go" {
+					todo = append(todo, f)
 				}
 			}
 		}

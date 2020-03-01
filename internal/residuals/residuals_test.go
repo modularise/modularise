@@ -10,6 +10,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Helcaraxan/modularise/cmd/config"
 	"github.com/Helcaraxan/modularise/internal/filecache/testcache"
 	"github.com/Helcaraxan/modularise/internal/splits"
 	"github.com/Helcaraxan/modularise/internal/testlib"
@@ -22,11 +23,11 @@ func TestFile(t *testing.T) {
 		testPkg   = "example.com/pkg"
 		testSplit = "test-split"
 	)
-	depSplit := &splits.Split{DataSplit: splits.DataSplit{Name: "split"}}
+	depSplit := &config.Split{DataSplit: splits.DataSplit{Name: "split"}}
 
 	tcs := map[string]struct {
 		in         string
-		pkgTosplit map[string]*splits.Split
+		pkgTosplit map[string]string
 		errs       []residualError
 	}{
 		"InterfaceType": {
@@ -36,7 +37,7 @@ type MyInterface interface {
 	LocalMethod(LocalType) (LocalType, error)
 	ExternalMethod(pkg.ExternalType) (pkg.ExternalType, error)
 }`,
-			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
+			pkgTosplit: map[string]string{testPkg: depSplit.Name},
 		},
 		"InterfaceTypeWithEmbedding": {
 			in: `package test
@@ -46,7 +47,7 @@ type MyInterface interface {
 
 	LocalMethod(LocalType) (LocalType, error)
 }`,
-			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
+			pkgTosplit: map[string]string{testPkg: depSplit.Name},
 		},
 		"StructType": {
 			in: `package test
@@ -55,7 +56,7 @@ type MyStruct struct {
 	LocalField LocalType
 	ExternalField pkg.ExternalType
 }`,
-			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
+			pkgTosplit: map[string]string{testPkg: depSplit.Name},
 		},
 		"StructTypeWithEmbedding": {
 			in: `package test
@@ -65,7 +66,7 @@ type MyStruct struct {
 
 	LocalField LocalType
 }`,
-			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
+			pkgTosplit: map[string]string{testPkg: depSplit.Name},
 		},
 		"UnexportedFunc": {
 			in: `package test
@@ -78,7 +79,7 @@ func unexportedFunc(_ pkg.ExternalType) {}
 
 func ExportedFunc(_ pkg.ExternalType) {}
 `,
-			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
+			pkgTosplit: map[string]string{testPkg: depSplit.Name},
 		},
 		"ExportedFuncNoSplit": {
 			in: `package test
@@ -92,7 +93,7 @@ func ExportedFunc(_ pkg.ExternalType) {}
 
 type LocalType pkg.ExportedType
 `,
-			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
+			pkgTosplit: map[string]string{testPkg: depSplit.Name},
 		},
 		"TypeRedeclarationNonSplit": {
 			in: `package test
@@ -106,7 +107,7 @@ type LocalType pkg.ExportedType
 
 type LocalType = pkg.ExportedType
 `,
-			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
+			pkgTosplit: map[string]string{testPkg: depSplit.Name},
 		},
 		"TypeAliasNonSplit": {
 			in: `package test
@@ -120,7 +121,7 @@ type LocalType = pkg.ExportedType
 
 const MyConst pkg.ExportedType = nil
 `,
-			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
+			pkgTosplit: map[string]string{testPkg: depSplit.Name},
 		},
 		"GlobalExportedConstantNonSplit": {
 			in: `package test
@@ -134,7 +135,7 @@ const MyConst pkg.ExportedType = nil
 
 var MyVar pkg.ExportedType
 `,
-			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
+			pkgTosplit: map[string]string{testPkg: depSplit.Name},
 		},
 		"GlobalExportedVariableNonSplit": {
 			in: `package test
@@ -156,15 +157,15 @@ var MyVar pkg.ExportedType
 
 			pkgToSplit := tc.pkgTosplit
 			if pkgToSplit == nil {
-				pkgToSplit = map[string]*splits.Split{}
+				pkgToSplit = map[string]string{}
 			}
 			a := &analyser{
 				log:     l,
 				fs:      token.NewFileSet(),
 				imports: map[string]string{"pkg": testPkg},
 				pkgs:    map[string]bool{testPkg: true},
-				s:       &splits.Split{DataSplit: splits.DataSplit{Name: testSplit}},
-				sp:      &splits.Splits{DataSplits: splits.DataSplits{PkgToSplit: pkgToSplit}},
+				s:       &config.Split{DataSplit: splits.DataSplit{Name: testSplit}},
+				sp:      &config.Splits{DataSplits: splits.DataSplits{PkgToSplit: pkgToSplit}},
 			}
 			f, err := parser.ParseFile(a.fs, "", tc.in, parser.AllErrors|parser.ParseComments)
 			testlib.NoError(t, true, err)
@@ -183,11 +184,11 @@ func TestType(t *testing.T) {
 		testPkg   = "example.com/pkg"
 		testSplit = "test-split"
 	)
-	depSplit := &splits.Split{DataSplit: splits.DataSplit{Name: "split"}}
+	depSplit := &config.Split{DataSplit: splits.DataSplit{Name: "split"}}
 
 	tcs := map[string]struct {
 		in         string
-		pkgTosplit map[string]*splits.Split
+		pkgTosplit map[string]string
 		errs       []residualError
 	}{
 		"LocalExportedType": {
@@ -198,11 +199,11 @@ func TestType(t *testing.T) {
 		},
 		"ExternalSplitExportedType": {
 			in:         "pkg.ExternalType",
-			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
+			pkgTosplit: map[string]string{testPkg: depSplit.Name},
 		},
 		"ExternalSplitUnexportedType": {
 			in:         "pkg.externalType",
-			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
+			pkgTosplit: map[string]string{testPkg: depSplit.Name},
 			errs:       []residualError{&unexportedImportErr{Split: testSplit, Pkg: testPkg, Symbol: "pkg.externalType", Loc: "1:1"}},
 		},
 		"ExternalNonSplitExportedType": {
@@ -215,7 +216,7 @@ func TestType(t *testing.T) {
 		},
 		"MapType": {
 			in:         `map[LocalType]pkg.ExternalType`,
-			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
+			pkgTosplit: map[string]string{testPkg: depSplit.Name},
 		},
 		"StarType": {
 			in: "*LocalType",
@@ -231,7 +232,7 @@ func TestType(t *testing.T) {
 		},
 		"ComplexType": {
 			in:         "chan *([]*pkg.ExternalType)",
-			pkgTosplit: map[string]*splits.Split{testPkg: depSplit},
+			pkgTosplit: map[string]string{testPkg: depSplit.Name},
 		},
 	}
 
@@ -246,15 +247,15 @@ func TestType(t *testing.T) {
 
 			pkgToSplit := tc.pkgTosplit
 			if pkgToSplit == nil {
-				pkgToSplit = map[string]*splits.Split{}
+				pkgToSplit = map[string]string{}
 			}
 			a := &analyser{
 				log:     l,
 				fs:      token.NewFileSet(),
 				imports: map[string]string{"pkg": testPkg},
 				pkgs:    map[string]bool{testPkg: true},
-				s:       &splits.Split{DataSplit: splits.DataSplit{Name: "test-split"}},
-				sp:      &splits.Splits{DataSplits: splits.DataSplits{PkgToSplit: pkgToSplit}},
+				s:       &config.Split{DataSplit: splits.DataSplit{Name: "test-split"}},
+				sp:      &config.Splits{DataSplits: splits.DataSplits{PkgToSplit: pkgToSplit}},
 			}
 			e, err := parser.ParseExprFrom(a.fs, "", tc.in, parser.AllErrors|parser.ParseComments)
 			testlib.NoError(t, true, err)
@@ -271,19 +272,19 @@ func TestResolveImportsAndResiduals(t *testing.T) {
 
 	const testModulePath = "example.com/repo"
 	pkgPath := func(p string) string { return filepath.Join(testModulePath, p) }
-	depSplitA := &splits.Split{DataSplit: splits.DataSplit{Name: "a"}}
-	depSplitB := &splits.Split{DataSplit: splits.DataSplit{Name: "b"}}
+	depSplitA := &config.Split{DataSplit: splits.DataSplit{Name: "a"}}
+	depSplitB := &config.Split{DataSplit: splits.DataSplit{Name: "b"}}
 
 	tcs := map[string]struct {
 		imports           []*ast.ImportSpec
-		pkgToSplit        map[string]*splits.Split
+		pkgToSplit        map[string]string
 		expectedImports   map[string]string
 		expectedResiduals map[string]bool
 		expectedSplitDeps map[string]bool
 	}{
 		"NoImports": {
 			imports:           nil,
-			pkgToSplit:        map[string]*splits.Split{},
+			pkgToSplit:        map[string]string{},
 			expectedImports:   map[string]string{},
 			expectedResiduals: map[string]bool{},
 			expectedSplitDeps: map[string]bool{},
@@ -292,8 +293,8 @@ func TestResolveImportsAndResiduals(t *testing.T) {
 			imports: []*ast.ImportSpec{
 				{Path: &ast.BasicLit{Value: `"third-party.com/module"`}},
 			},
-			pkgToSplit: map[string]*splits.Split{
-				pkgPath("bar"): depSplitA,
+			pkgToSplit: map[string]string{
+				pkgPath("bar"): depSplitA.Name,
 			},
 			expectedImports: map[string]string{
 				"module": "third-party.com/module",
@@ -306,9 +307,9 @@ func TestResolveImportsAndResiduals(t *testing.T) {
 				{Path: &ast.BasicLit{Value: pkgPath("bar")}},
 				{Name: ast.NewIdent("renamed"), Path: &ast.BasicLit{Value: pkgPath("bar/bar")}},
 			},
-			pkgToSplit: map[string]*splits.Split{
-				pkgPath("bar"):     depSplitA,
-				pkgPath("bar/bar"): depSplitA,
+			pkgToSplit: map[string]string{
+				pkgPath("bar"):     depSplitA.Name,
+				pkgPath("bar/bar"): depSplitA.Name,
 			},
 			expectedImports: map[string]string{
 				"bar":     pkgPath("bar"),
@@ -322,8 +323,8 @@ func TestResolveImportsAndResiduals(t *testing.T) {
 				{Path: &ast.BasicLit{Value: pkgPath("bar")}},
 				{Name: ast.NewIdent("renamed"), Path: &ast.BasicLit{Value: pkgPath("bar/bar")}},
 			},
-			pkgToSplit: map[string]*splits.Split{
-				pkgPath("bar/bar"): depSplitA,
+			pkgToSplit: map[string]string{
+				pkgPath("bar/bar"): depSplitA.Name,
 			},
 			expectedImports: map[string]string{
 				"bar":     pkgPath("bar"),
@@ -339,9 +340,9 @@ func TestResolveImportsAndResiduals(t *testing.T) {
 				{Path: &ast.BasicLit{Value: pkgPath("bar")}},
 				{Name: ast.NewIdent("renamed"), Path: &ast.BasicLit{Value: pkgPath("bar/bar")}},
 			},
-			pkgToSplit: map[string]*splits.Split{
-				pkgPath("bar"):     depSplitA,
-				pkgPath("bar/bar"): depSplitB,
+			pkgToSplit: map[string]string{
+				pkgPath("bar"):     depSplitA.Name,
+				pkgPath("bar/bar"): depSplitB.Name,
 			},
 			expectedImports: map[string]string{
 				"bar":     pkgPath("bar"),
@@ -376,12 +377,12 @@ func TestResolveImportsAndResiduals(t *testing.T) {
 				log:     l,
 				fc:      fc,
 				imports: map[string]string{},
-				s: &splits.Split{DataSplit: splits.DataSplit{
+				s: &config.Split{DataSplit: splits.DataSplit{
 					Name:      "a",
 					Residuals: map[string]bool{},
 					SplitDeps: map[string]bool{},
 				}},
-				sp: &splits.Splits{DataSplits: splits.DataSplits{PkgToSplit: tc.pkgToSplit}},
+				sp: &config.Splits{DataSplits: splits.DataSplits{PkgToSplit: tc.pkgToSplit}},
 			}
 			err = a.computeSplitDepsAndResiduals(tc.imports)
 			testlib.NoError(t, true, err)

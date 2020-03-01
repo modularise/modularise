@@ -13,7 +13,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 
-	"github.com/Helcaraxan/modularise/internal/splits"
+	"github.com/Helcaraxan/modularise/cmd/config"
 )
 
 type ProxyModuleInfo struct {
@@ -22,7 +22,7 @@ type ProxyModuleInfo struct {
 	Hash    string    `json:"-"`
 }
 
-func Version(l *logrus.Logger, s *splits.Split) (*ProxyModuleInfo, error) {
+func Version(l *logrus.Logger, s *config.Split) (*ProxyModuleInfo, error) {
 	if s.Repo == nil {
 		if s.Repo == nil {
 			l.Errorf("Attempting to push new content for split %q in %q without having initialised a repository.", s.Name, s.WorkDir)
@@ -34,7 +34,7 @@ func Version(l *logrus.Logger, s *splits.Split) (*ProxyModuleInfo, error) {
 
 type versioner struct {
 	log *logrus.Logger
-	s   *splits.Split
+	s   *config.Split
 }
 
 func (v versioner) pseudoVersion() (*ProxyModuleInfo, error) {

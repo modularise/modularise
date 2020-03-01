@@ -11,11 +11,11 @@ import (
 	"golang.org/x/mod/module"
 	"golang.org/x/mod/zip"
 
+	"github.com/Helcaraxan/modularise/cmd/config"
 	"github.com/Helcaraxan/modularise/internal/modworks/pseudo"
-	"github.com/Helcaraxan/modularise/internal/splits"
 )
 
-func (r *resolver) populateLocalProxy(s *splits.Split) error {
+func (r *resolver) populateLocalProxy(s *config.Split) error {
 	info, err := pseudo.Version(r.log, s)
 	if err != nil {
 		return err
