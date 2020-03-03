@@ -10,10 +10,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/Helcaraxan/modularise/cmd/config"
-	"github.com/Helcaraxan/modularise/internal/filecache/testcache"
-	"github.com/Helcaraxan/modularise/internal/splits"
-	"github.com/Helcaraxan/modularise/internal/testlib"
+	"github.com/modularise/modularise/cmd/config"
+	"github.com/modularise/modularise/internal/filecache/testcache"
+	"github.com/modularise/modularise/internal/splits"
+	"github.com/modularise/modularise/internal/testlib"
 )
 
 func TestFile(t *testing.T) {

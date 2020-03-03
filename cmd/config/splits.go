@@ -1,6 +1,6 @@
 package config
 
-import "github.com/Helcaraxan/modularise/internal/splits"
+import "github.com/modularise/modularise/internal/splits"
 
 type Splits struct {
 	// Authentication setup to clone / push Git repositories.

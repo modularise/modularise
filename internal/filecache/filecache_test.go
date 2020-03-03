@@ -9,7 +9,7 @@ import (
 
 	"github.com/rogpeppe/go-internal/txtar"
 
-	"github.com/Helcaraxan/modularise/internal/testlib"
+	"github.com/modularise/modularise/internal/testlib"
 )
 
 func TestModulePath(t *testing.T) {

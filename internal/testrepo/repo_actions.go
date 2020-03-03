@@ -8,7 +8,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 
-	"github.com/Helcaraxan/modularise/internal/testlib"
+	"github.com/modularise/modularise/internal/testlib"
 )
 
 type RepoAction func(*TestRepo)

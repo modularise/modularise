@@ -17,7 +17,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 
-	"github.com/Helcaraxan/modularise/cmd/config"
+	"github.com/modularise/modularise/cmd/config"
 )
 
 const (

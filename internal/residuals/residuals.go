@@ -10,8 +10,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/Helcaraxan/modularise/cmd/config"
-	"github.com/Helcaraxan/modularise/internal/filecache"
+	"github.com/modularise/modularise/cmd/config"
+	"github.com/modularise/modularise/internal/filecache"
 )
 
 func ComputeResiduals(l *logrus.Logger, fc filecache.FileCache, s *config.Splits) error {

@@ -12,8 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/src-d/go-git.v4"
 
-	"github.com/Helcaraxan/modularise/cmd/config"
-	"github.com/Helcaraxan/modularise/internal/filecache"
+	"github.com/modularise/modularise/cmd/config"
+	"github.com/modularise/modularise/internal/filecache"
 )
 
 func CreateSplitModules(log *logrus.Logger, fc filecache.FileCache, sp *config.Splits) error {

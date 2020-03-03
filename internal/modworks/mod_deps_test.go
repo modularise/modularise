@@ -12,10 +12,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/Helcaraxan/modularise/cmd/config"
-	"github.com/Helcaraxan/modularise/internal/splits"
-	"github.com/Helcaraxan/modularise/internal/testlib"
-	"github.com/Helcaraxan/modularise/internal/testrepo"
+	"github.com/modularise/modularise/cmd/config"
+	"github.com/modularise/modularise/internal/splits"
+	"github.com/modularise/modularise/internal/testlib"
+	"github.com/modularise/modularise/internal/testrepo"
 )
 
 func TestLocalProxy(t *testing.T) {

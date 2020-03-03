@@ -12,7 +12,7 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 
-	"github.com/Helcaraxan/modularise/cmd/config"
+	"github.com/modularise/modularise/cmd/config"
 )
 
 func (r *resolver) resolveSplitDeps(s *config.Split) error {
