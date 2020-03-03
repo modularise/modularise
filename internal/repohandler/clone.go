@@ -137,11 +137,14 @@ func cloneRepository(log *logrus.Logger, s *config.Split, sp *config.Splits) err
 		if tle.Name() == ".git" {
 			continue
 		} else if sp.NonModuleSource && (tle.Name() == "go.mod" || tle.Name() == "go.sum") {
-			// If the source project is not a Go module we want to preserve any existing module context.
+			// If the source project is not a Go module we want to preserve any existing module
+			// context.
 			continue
 		}
 
-		if err = wt.Filesystem.Remove(tle.Name()); err != nil {
+		// We need to use the 'os.RemoveAll()' method instead of 'wt.Filesystem.Remove()' because
+		// the latter will result in errors on non-empty directories.
+		if err = os.RemoveAll(filepath.Join(wt.Filesystem.Root(), tle.Name())); err != nil {
 			log.WithError(err).Errorf("Failed to clean out top-level %q in git working tree at %q for split %q.", tle.Name(), s.WorkDir, s.Name)
 			return err
 		}
@@ -156,8 +159,8 @@ func initRepository(log *logrus.Logger, s *config.Split) error {
 		return err
 	}
 
-	var wt *git.Worktree
-	if wt, err = r.Worktree(); err != nil {
+	wt, err := r.Worktree()
+	if err != nil {
 		log.WithError(err).Errorf("Failed to obtain the worktree of the new git repository in %q.", s.WorkDir)
 		return err
 	}
@@ -185,7 +188,10 @@ func initRepository(log *logrus.Logger, s *config.Split) error {
 	if bn == "" {
 		bn = defaultBranchName
 	}
-	br := &gitconfig.Branch{Name: bn}
+	br := &gitconfig.Branch{
+		Name:  bn,
+		Merge: plumbing.NewBranchReferenceName(bn),
+	}
 	gc.Branches[bn] = br
 
 	brn := plumbing.NewBranchReferenceName(bn)
@@ -199,7 +205,13 @@ func initRepository(log *logrus.Logger, s *config.Split) error {
 	}
 
 	if s.URL != "" {
-		gc.Remotes[defaultRemoteName] = &gitconfig.RemoteConfig{Name: defaultRemoteName, URLs: []string{s.URL}}
+		gc.Remotes[defaultRemoteName] = &gitconfig.RemoteConfig{
+			Name: defaultRemoteName,
+			URLs: []string{s.URL},
+			Fetch: []gitconfig.RefSpec{
+				gitconfig.RefSpec(fmt.Sprintf("+refs/heads/*:refs/remotes/%s/*", defaultRemoteName)),
+			},
+		}
 		br.Remote = defaultRemoteName
 	}
 

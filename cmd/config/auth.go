@@ -9,14 +9,14 @@ import (
 )
 
 type AuthConfig struct {
-	PubKey    string       `yaml:"pub_key"`
-	TokenFile string       `yaml:"token_file"`
-	UserPass  UserPassword `yaml:"userpass"`
+	PubKey    string       `yaml:"pub_key,omitempty"`
+	TokenFile string       `yaml:"token_file,omitempty"`
+	UserPass  UserPassword `yaml:"userpass,omitempty"`
 }
 
 type UserPassword struct {
-	Username     string `yaml:"username"`
-	PasswordFile string `yaml:"password_file"`
+	Username     string `yaml:"username,omitempty"`
+	PasswordFile string `yaml:"password_file,omitempty"`
 }
 
 func (a AuthConfig) ExtractAuth() (transport.AuthMethod, error) {

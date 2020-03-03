@@ -5,7 +5,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"gopkg.in/src-d/go-git.v4"
-	gitconfig "gopkg.in/src-d/go-git.v4/config"
 
 	modularise_config "github.com/modularise/modularise/cmd/config"
 )
@@ -34,14 +33,7 @@ func PushSplits(log *logrus.Logger, sp *modularise_config.Splits) error {
 		if bn == "" {
 			bn = defaultBranchName
 		}
-		po := git.PushOptions{
-			Auth:       auth,
-			RemoteName: defaultRemoteName,
-			RefSpecs: []gitconfig.RefSpec{
-				gitconfig.RefSpec(fmt.Sprintf("refs/heads/%s:refs/remotes/%s/%s", bn, defaultRemoteName, bn)),
-			},
-		}
-		if err = s.Repo.Push(&po); err != nil {
+		if err = s.Repo.Push(&git.PushOptions{Auth: auth}); err != nil {
 			log.WithError(err).Errorf("Failed to push new split content for %q to the remote at %q.", s.Name, s.URL)
 			return err
 		}
