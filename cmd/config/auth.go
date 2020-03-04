@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -11,26 +12,21 @@ import (
 )
 
 type AuthConfig struct {
-	PubKey      string       `yaml:"pub_key,omitempty"`
-	TokenFile   string       `yaml:"token_file,omitempty"`
-	TokenEnvVar string       `yaml:"token,omitempty"`
-	UserPass    UserPassword `yaml:"userpass,omitempty"`
+	PubKey   *string       `yaml:"pub_key,omitempty"`
+	UserPass *UserPassword `yaml:"userpass,omitempty"`
 }
 
 type UserPassword struct {
-	Username     string `yaml:"username,omitempty"`
-	PasswordFile string `yaml:"password_file,omitempty"`
+	Username       string `yaml:"username,omitempty"`
+	PasswordFile   string `yaml:"password_file,omitempty"`
+	PasswordEnvVar string `yaml:"password_envvar,omitempty"`
 }
 
 func (a AuthConfig) ExtractAuth() (transport.AuthMethod, error) {
 	switch {
-	case a.TokenEnvVar != "":
-		return a.extractAuthEnvAT()
-	case a.TokenFile != "":
-		return a.extractAuthFileAT()
-	case a.PubKey != "":
+	case a.PubKey != nil:
 		return a.extractAuthSSH()
-	case a.UserPass.PasswordFile != "":
+	case a.UserPass != nil:
 		return a.extractAuthUserPass()
 	default:
 		return nil, nil
@@ -38,7 +34,7 @@ func (a AuthConfig) ExtractAuth() (transport.AuthMethod, error) {
 }
 
 func (a AuthConfig) extractAuthSSH() (transport.AuthMethod, error) {
-	sshKey, err := ioutil.ReadFile(a.PubKey)
+	sshKey, err := ioutil.ReadFile(*a.PubKey)
 	if err != nil {
 		return nil, err
 	}
@@ -49,29 +45,28 @@ func (a AuthConfig) extractAuthSSH() (transport.AuthMethod, error) {
 	return publicKey, nil
 }
 
-func (a AuthConfig) extractAuthEnvAT() (transport.AuthMethod, error) {
-	token, ok := os.LookupEnv(a.TokenEnvVar)
-	if !ok {
-		return nil, fmt.Errorf("environment variable %q was not set with a github authentication token", a.TokenEnvVar)
-	}
-	return &http.TokenAuth{Token: token}, nil
-}
-
-func (a AuthConfig) extractAuthFileAT() (transport.AuthMethod, error) {
-	token, err := ioutil.ReadFile(a.TokenFile)
-	if err != nil {
-		return nil, err
-	}
-	return &http.TokenAuth{Token: string(token)}, nil
-}
-
 func (a AuthConfig) extractAuthUserPass() (transport.AuthMethod, error) {
-	pwd, err := ioutil.ReadFile(a.UserPass.PasswordFile)
-	if err != nil {
-		return nil, err
+	c := a.UserPass
+	if c.Username == "" || (c.PasswordEnvVar == "" && c.PasswordFile == "") {
+		return nil, errors.New("no username and / or password source configured")
 	}
+
+	var token string
+	if c.PasswordEnvVar != "" {
+		var ok bool
+		if token, ok = os.LookupEnv(c.PasswordEnvVar); !ok {
+			return nil, fmt.Errorf("authentication environment variable %q was not set", c.PasswordEnvVar)
+		}
+	} else {
+		b, err := ioutil.ReadFile(a.UserPass.PasswordFile)
+		if err != nil {
+			return nil, err
+		}
+		token = string(b)
+	}
+
 	return &http.BasicAuth{
 		Username: a.UserPass.Username,
-		Password: string(pwd),
+		Password: token,
 	}, nil
 }
