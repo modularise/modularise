@@ -1,0 +1,28 @@
+name: Modularise CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    name: Test & build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.14
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.14
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+
+      - name: Test
+        run: make test
+
+      - name: Build
+        run: make build
