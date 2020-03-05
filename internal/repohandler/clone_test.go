@@ -52,7 +52,7 @@ func TestInitRepository(t *testing.T) {
 					Name:    "a",
 					WorkDir: td,
 				},
-			})
+			}, &config.Splits{})
 			testlib.NoError(t, true, err)
 			r, err := git.PlainOpen(td)
 			testlib.NoError(t, true, err)

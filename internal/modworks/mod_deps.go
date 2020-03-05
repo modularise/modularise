@@ -7,10 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
 
 	"github.com/modularise/modularise/cmd/config"
 )
@@ -107,12 +105,8 @@ func (r *resolver) commitChanges(s *config.Split) error {
 	_, err = wt.Commit(
 		fmt.Sprintf("Splice from %s@%s", r.fc.ModulePath(), r.sourceVer),
 		&git.CommitOptions{
-			All: true,
-			Author: &object.Signature{
-				Name:  "Modularise",
-				Email: "modularise@modularise.com",
-				When:  time.Now(),
-			},
+			All:    true,
+			Author: r.sp.Author.ExtractAuthor(),
 		},
 	)
 	if err != nil {

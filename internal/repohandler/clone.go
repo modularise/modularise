@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	"gopkg.in/src-d/go-billy.v4/osfs"
@@ -13,7 +12,6 @@ import (
 	gitconfig "gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/cache"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 
@@ -87,7 +85,7 @@ func initSplitDir(log *logrus.Logger, s *config.Split) error {
 func cloneRepository(log *logrus.Logger, s *config.Split, sp *config.Splits) error {
 	if s.URL == "" {
 		log.Infof("No remote configured for split %q. It won't be synced to a Git repository but its content will be stored at %q.", s.Name, s.WorkDir)
-		return initRepository(log, s)
+		return initRepository(log, s, sp)
 	}
 
 	log.Debugf("Extracting authentication information from config %v.", sp.Credentials)
@@ -113,7 +111,7 @@ func cloneRepository(log *logrus.Logger, s *config.Split, sp *config.Splits) err
 		},
 	)
 	if err == transport.ErrEmptyRemoteRepository {
-		return initRepository(log, s)
+		return initRepository(log, s, sp)
 	} else if err != nil {
 		log.WithError(err).Errorf("Failed to clone the remote repository from %q into %q for split %q.", s.URL, s.WorkDir, s.Name)
 		return err
@@ -152,7 +150,7 @@ func cloneRepository(log *logrus.Logger, s *config.Split, sp *config.Splits) err
 	return nil
 }
 
-func initRepository(log *logrus.Logger, s *config.Split) error {
+func initRepository(log *logrus.Logger, s *config.Split, sp *config.Splits) error {
 	r, err := git.Init(filesystem.NewStorage(osfs.New(filepath.Join(s.WorkDir, ".git")), cache.NewObjectLRUDefault()), osfs.New(s.WorkDir))
 	if err != nil {
 		log.WithError(err).Errorf("Failed to initialise a new git repository in %q.", s.WorkDir)
@@ -166,13 +164,7 @@ func initRepository(log *logrus.Logger, s *config.Split) error {
 	}
 
 	// We need to create an initial commit for references to be populated.
-	h, err := wt.Commit("Initial commit", &git.CommitOptions{
-		Author: &object.Signature{
-			Name:  "Modularise",
-			Email: "modularise@modularise.com",
-			When:  time.Now(),
-		},
-	})
+	h, err := wt.Commit("Initial commit", &git.CommitOptions{Author: sp.Author.ExtractAuthor()})
 	if err != nil {
 		log.WithError(err).Errorf("Failed to create initial empty commit in new git repository in %q.", s.WorkDir)
 		return err
