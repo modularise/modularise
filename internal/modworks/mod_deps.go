@@ -63,7 +63,9 @@ func (r *resolver) cleanupGoMod(s *config.Split) error {
 		return err
 	}
 
-	out, err := exec.Command("go", "env", "GOPROXY").CombinedOutput()
+	cmd := exec.Command("go", "env", "GOPROXY")
+	cmd.Env = append(os.Environ(), "GODEBUG=") // Don't pass any debug options to the lower-level invocation.
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		r.log.Error("Failed to determine current GORPOXY value via 'go env'.", zap.Error(err))
 		return err
@@ -74,10 +76,11 @@ func (r *resolver) cleanupGoMod(s *config.Split) error {
 		splitPaths = append(splitPaths, r.sp.Splits[sn].ModulePath)
 	}
 
-	cmd := exec.Command("go", "mod", "tidy")
+	cmd = exec.Command("go", "mod", "tidy")
 	cmd.Dir = s.WorkDir
 	cmd.Env = append(
 		os.Environ(),
+		"GODEBUG=", // Don't pass any debug options to the lower-level invocation.
 		fmt.Sprintf("GONOSUMDB=%s", strings.Join(splitPaths, ",")),
 		fmt.Sprintf("GOPROXY=file://%s", r.localProxy),
 	)

@@ -36,6 +36,7 @@ func NewUncache(log *zap.Logger, root string) (*Uncache, error) {
 	cmd := exec.Command("go", "list", "-m", "-json")
 	cmd.Env = append(
 		os.Environ(),
+		"GODEBUG=",         // Don't pass any debug options to the lower-level invocation.
 		"GO111MODULE=auto", // This is to ensure we fail when running in non-module directories.
 	)
 	cmd.Dir = root

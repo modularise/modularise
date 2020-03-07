@@ -32,6 +32,7 @@ func CreateSplitModules(log *zap.Logger, fc filecache.FileCache, sp *config.Spli
 		log.Debug("Pre-heating the module cache by running 'go mod tidy' on the source project.", zap.String("directory", fc.Root()))
 		cmd := exec.Command("go", "mod", "tidy")
 		cmd.Dir = fc.Root()
+		cmd.Env = append(os.Environ(), "GODEBUG=") // Don't pass any debug options to the lower-level invocation.
 		if out, err := cmd.CombinedOutput(); err != nil {
 			log.Error(
 				"Failed to run 'go mod tidy' on source project",
@@ -163,6 +164,7 @@ func (r *resolver) initSplitModule(s *config.Split, deps map[string]bool) error 
 		} else if os.IsNotExist(err) {
 			cmd := exec.Command("go", "mod", "init", s.ModulePath)
 			cmd.Dir = s.WorkDir
+			cmd.Env = append(os.Environ(), "GODEBUG=") // Don't pass any debug options to the lower-level invocation.
 			if out, err := cmd.CombinedOutput(); err != nil {
 				r.log.Error("Failed to initialise Go module.", zap.String("directory", s.WorkDir), zap.ByteString("output", out))
 				return err
@@ -198,6 +200,7 @@ func (r *resolver) initSplitModule(s *config.Split, deps map[string]bool) error 
 
 	cmd := exec.Command("go", "mod", "tidy")
 	cmd.Dir = s.WorkDir
+	cmd.Env = append(os.Environ(), "GODEBUG=") // Don't pass any debug options to the lower-level invocation.
 
 	r.log.Debug("Pre-cleaning with 'go mod tidy' using 'replace' statements.", zap.String("split", s.Name), zap.String("directory", s.WorkDir))
 	if out, err := cmd.CombinedOutput(); err != nil {

@@ -130,7 +130,9 @@ func (c *CLIConfig) findConfigFile() error {
 	defer cancel()
 
 	c.Logger.Debug("Running 'go list -m -json' to determine the current module root for the default configuration file location.")
-	out, err := exec.CommandContext(ctx, "go", "list", "-m", "-json").CombinedOutput()
+	cmd := exec.CommandContext(ctx, "go", "list", "-m", "-json")
+	cmd.Env = append(os.Environ(), "GODEBUG=") // Don't pass any debug options to the lower-level invocation.
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		c.Logger.Error("Could not determine Go module for the current directory. Are you sure you are inside the target module?", zap.Error(err))
 		return fmt.Errorf("failed to run 'go list -m -json': %v\noutput was:\n%s", err, out)

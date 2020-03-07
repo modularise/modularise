@@ -116,6 +116,7 @@ func TestLocalProxy(t *testing.T) {
 	cmd.Dir = wp
 	cmd.Env = append(
 		os.Environ(),
+		"GODEBUG=", // Don't pass any debug options to the lower-level invocation.
 		fmt.Sprintf("GOPATH=%s", gopath),
 		fmt.Sprintf("GOPROXY=file://%s", proxyPath),
 		fmt.Sprintf("GOSUMDB=off"),
