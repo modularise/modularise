@@ -192,18 +192,69 @@ func TestReadGoFile(t *testing.T) {
 
 func parallelTestAllCacheTypes(t *testing.T, a *txtar.Archive, test func(*testing.T, FileCache)) {
 	cacheTypes := map[string]Type{
-		"TestCache": TestCache,
+		"Cache":     Cache,
 		"Uncache":   Uncache,
+		"TestCache": TestCache,
 	}
 
 	for cn := range cacheTypes {
 		ct := cacheTypes[cn]
 		t.Run(cn, func(t *testing.T) {
-			cache, cleanup := initFileCache(t, ct, a)
+			cache, cleanup := testFileCache(t, ct, a)
 
 			defer cleanup()
 
 			test(t, cache)
+		})
+	}
+}
+
+func BenchmarkReadGoFile(b *testing.B) {
+	tc, err := ioutil.ReadFile("./testdata/read_go_file.txtar")
+	if err != nil {
+		b.FailNow()
+	}
+
+	a := txtar.Parse(tc)
+
+	tfs := map[string]bool{}
+	for _, f := range strings.Split(strings.TrimSpace(string(a.Comment)), "\n") {
+		if strings.HasPrefix(f, "#") || f == "" {
+			continue
+		}
+		tfs[f] = true
+	}
+	if len(tfs) <= 0 {
+		b.FailNow()
+	}
+
+	parallelBenchmarkAllCacheTypes(b, a, func(b *testing.B, fc FileCache) {
+		for tf := range tfs {
+			for i := 0; i < b.N; i++ {
+				_, _, err := fc.ReadGoFile(tf)
+				if err != nil {
+					b.FailNow()
+				}
+			}
+		}
+	})
+}
+
+func parallelBenchmarkAllCacheTypes(b *testing.B, a *txtar.Archive, test func(*testing.B, FileCache)) {
+	cacheTypes := map[string]Type{
+		"Cache":     Cache,
+		"Uncache":   Uncache,
+		"TestCache": TestCache,
+	}
+
+	for cn := range cacheTypes {
+		ct := cacheTypes[cn]
+		b.Run(cn, func(b *testing.B) {
+			cache, cleanup := benchmarkFileCache(b, ct, a)
+
+			defer cleanup()
+
+			test(b, cache)
 		})
 	}
 }

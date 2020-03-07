@@ -4,14 +4,16 @@ import (
 	"go/ast"
 	"go/token"
 
+	"github.com/modularise/modularise/internal/filecache/cache"
 	"github.com/modularise/modularise/internal/filecache/testcache"
 	"github.com/modularise/modularise/internal/filecache/uncache"
 )
 
 // Ensure that we implement the required interface.
 var (
-	_ FileCache = &testcache.FakeFileCache{}
+	_ FileCache = &cache.Cache{}
 	_ FileCache = &uncache.Uncache{}
+	_ FileCache = &testcache.FakeFileCache{}
 )
 
 type Type uint8
@@ -19,6 +21,7 @@ type Type uint8
 const (
 	Unknown Type = iota
 	Uncache
+	Cache
 	TestCache
 )
 
