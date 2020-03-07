@@ -14,6 +14,13 @@ import (
 	"github.com/modularise/modularise/internal/filecache"
 )
 
+// ComputeResiduals iterates over the configured splits and performs the residuals analysis for each
+// one of them. For the details of the residual analysis please consult the
+// ./docs/design/technical_breakdown.md document residing with the source code.
+//
+// The prequisites on the fields of a config.Splits object for CleaveSplits to be able to operate
+// are:
+//  - For each config.Split in Splits the Name and Files fields have been populated.
 func ComputeResiduals(l *logrus.Logger, fc filecache.FileCache, s *config.Splits) error {
 	pkgs, err := fc.Pkgs()
 	if err != nil {

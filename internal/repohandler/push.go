@@ -9,6 +9,12 @@ import (
 	modularise_config "github.com/modularise/modularise/cmd/config"
 )
 
+// PushSplits iterates over the configured splits and, if they have a remote repository configured,
+// pushed any new local content to the target branch.
+//
+// The prequisites on the fields of a config.Splits object for PushSplits to be able to operate are:
+//  - For each config.Split in Splits the WorkDir field is populated and corrresponds to an existing directory.
+//  - For each config.Split in Splits the Repo field is populated and corrresponds to an existing repository.
 func PushSplits(log *logrus.Logger, sp *modularise_config.Splits) error {
 	for _, s := range sp.Splits {
 		if s.Repo == nil {

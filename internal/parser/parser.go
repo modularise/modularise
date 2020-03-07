@@ -11,6 +11,8 @@ import (
 	"github.com/modularise/modularise/internal/filecache"
 )
 
+// Parse iterates over the configured splits and populates information about their contents. This
+// mostly covers files and Go packages
 func Parse(l *logrus.Logger, fc filecache.FileCache, sp *config.Splits) error {
 	if err := parseFiles(l, fc, sp); err != nil {
 		return err
@@ -78,6 +80,16 @@ func prefixLessThan(rhs, lhs string) int {
 	return strings.Compare(rhs, lhs)
 }
 
+// We use this custom prefixMapping datastructure to infer the appropriate mapping from a given
+// filepath to the corresponding split, if such a split exists. The algorithm that is used is:
+//  - For each 'include' create a prefixMapping to the including split's name.
+//  - For each 'exclude' create a prefixMapping to an empty string.
+//  - Sort the obtained slice of prefixMapping structs in alphabetical order, in the case of one
+//    string being a prefix of another, the longer string is sorted first.
+//  - In order to match a filepath to a split compute the theoretical index in the list where the
+//    filepath would be inserted. The current prefixMapping at that index indicates the split to
+//    which the filepath should be mapped. If the prefixMapping indicates an empty string the
+//    filepath does not belong to any string.
 type prefixMapping struct {
 	prefix string
 	split  string

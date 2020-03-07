@@ -23,6 +23,15 @@ const (
 	defaultRemoteName = "origin"
 )
 
+// InitSplits iterates over the configured splits and initialises a working directory for each one
+// of them in the configured WorkTree. If configured, the remote repository for each split is then
+// fetched into this working directory. If the remote repository is empty or no remote is configured
+// a new empty git repository is initialised instead.
+//
+// The prequisites on the fields of a config.Splits object for InitSplits to be able to operate are:
+//  - The WorkTree field is populated and corresponds to an existing directory.
+//  - For each config.Split in Splits the Name field has been populated.
+//  - For each config.Split in Splits the WorkDir field is either unpopulated or it corrresponds to a non-existing or empty directory.
 func InitSplits(log *logrus.Logger, sp *config.Splits) error {
 	if err := initWorkTree(log, sp); err != nil {
 		return err

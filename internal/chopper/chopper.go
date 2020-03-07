@@ -17,6 +17,15 @@ import (
 	"github.com/modularise/modularise/internal/filecache"
 )
 
+// CleaveSplits will create the content of the configured splits in their respective working
+// directories. This includes the rewriting of import paths where needed.
+//
+// The prequisites on the fields of a config.Splits object for CleaveSplits to be able to operate
+// are:
+//  - PathToSplit and PkgToSplit have been populated.
+//  - WorkTree has been populated and the path in question is an existing directory.
+//  - For each config.Split in Splits the Name, Files, Residuals and ResidualFiles fields have been populated.
+//  - For each config.Split in Splits the WorkDir field is populated and corrresponds to an existing directory.
 func CleaveSplits(log *logrus.Logger, fc filecache.FileCache, sp *config.Splits) error {
 	for _, s := range sp.Splits {
 		s.Root = computeSplitRoot(s.Files)
@@ -39,6 +48,9 @@ func CleaveSplits(log *logrus.Logger, fc filecache.FileCache, sp *config.Splits)
 	return nil
 }
 
+// computeSplitRoot will find the longest common prefix path of the supplied set of paths. Paths
+// must be filepaths and not directory paths as the last element of each path is stripped of before
+// compute the prefix.
 func computeSplitRoot(fs map[string]bool) string {
 	if len(fs) == 0 {
 		return ""

@@ -16,6 +16,15 @@ import (
 	"github.com/modularise/modularise/internal/filecache"
 )
 
+// CreateSplitModules iterates over the configures splits and initialise a Go module in each split's
+// working directory.
+//
+// The prequisites on the fields of a config.Splits object for CreateSplitModules to be able to
+// operate are:
+//  - NonModuleSource is set to true if relevant.
+//  - For each config.Split in Splits the Name, SplitDeps fields are populated.
+//  - For each config.Split in Splits the WorkDir field is populated and corrresponds to an existing directory.
+//  - For each config.Split in Splits the Repo field is populated and corrresponds to an existing repository.
 func CreateSplitModules(log *logrus.Logger, fc filecache.FileCache, sp *config.Splits) error {
 	if !sp.NonModuleSource {
 		// Ensure the module-cache is preheated such that future runs of 'go mod tidy' can be done with
