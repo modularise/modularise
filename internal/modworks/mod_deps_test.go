@@ -13,10 +13,65 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/modularise/modularise/cmd/config"
+	"github.com/modularise/modularise/internal/filecache/testcache"
 	"github.com/modularise/modularise/internal/splits"
 	"github.com/modularise/modularise/internal/testlib"
 	"github.com/modularise/modularise/internal/testrepo"
 )
+
+func TestCommitChanges(t *testing.T) {
+	t.Parallel()
+
+	td, err := ioutil.TempDir("", "modularise-test-commit-changes")
+	testlib.NoError(t, true, err)
+	defer cleanupTestDir(t, td)
+
+	log := logrus.New()
+	log.SetLevel(logrus.DebugLevel)
+	log.SetReportCaller(true)
+
+	fc, err := testcache.NewFakeFileCache("", map[string]testcache.FakeFileCacheEntry{
+		"go.mod": {Data: []byte("module example.com/project\n")},
+	})
+	testlib.NoError(t, true, err)
+
+	repo := testrepo.CreateTestRepo(t, []testrepo.RepoAction{
+		testrepo.AddFile(testrepo.RepoFile{Path: "test.txt", Content: []byte("foo")}),
+		testrepo.Commit("First commit"),
+	})
+	repo.WriteToDisk(filepath.Join(td, "repo"))
+	h := repo.Head()
+
+	r := &resolver{
+		log:       log,
+		fc:        fc,
+		sp:        &config.Splits{},
+		sourceVer: "v0.0.0-sourcever",
+	}
+	s := &config.Split{DataSplit: splits.DataSplit{
+		Name:    "split",
+		WorkDir: td,
+		Repo:    repo.Repository(),
+	}}
+
+	// Test that we do not create a new commit if the repo is clean.
+	err = r.commitChanges(s)
+	testlib.NoError(t, true, err)
+
+	nh := repo.Head()
+	testlib.Equal(t, true, h.Hash, nh.Hash)
+
+	// Test that we create a new commit when the repo is dirty.
+	repo.Apply([]testrepo.RepoAction{
+		testrepo.AddFile(testrepo.RepoFile{Path: "new.txt", Content: []byte("foo")}),
+	})
+
+	err = r.commitChanges(s)
+	testlib.NoError(t, true, err)
+
+	nh = repo.Head()
+	testlib.NotEqual(t, true, h.Hash, nh.Hash)
+}
 
 func TestLocalProxy(t *testing.T) {
 	t.Parallel()

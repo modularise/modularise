@@ -98,8 +98,25 @@ func (r *resolver) commitChanges(s *config.Split) error {
 	}
 
 	if err = wt.AddGlob("."); err != nil {
-		r.log.WithError(err).Errorf("Failed to add all new files to the index in %q.", s.WorkDir)
+		r.log.WithError(err).Errorf("Failed to add new, deleted or modified files to the index in %q.", s.WorkDir)
 		return err
+	}
+
+	st, err := wt.Status()
+	if err != nil {
+		r.log.WithError(err).Errorf("Failed to get the git status of the split %q at %q.", s.Name, s.WorkDir)
+		return err
+	}
+
+	var dirty bool
+	for _, fs := range st {
+		if fs.Staging != git.Unmodified {
+			dirty = true
+			break
+		}
+	}
+	if !dirty {
+		return nil
 	}
 
 	_, err = wt.Commit(

@@ -35,10 +35,14 @@ func CreateTestRepo(t *testing.T, actions []RepoAction) *TestRepo {
 		r: r,
 	}
 
-	for i := range actions {
-		actions[i](repo)
-	}
+	repo.Apply(actions)
 	return repo
+}
+
+func (r *TestRepo) Apply(actions []RepoAction) {
+	for i := range actions {
+		actions[i](r)
+	}
 }
 
 func (r *TestRepo) WriteToDisk(path string) {

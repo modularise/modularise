@@ -29,10 +29,6 @@ func PushSplits(log *logrus.Logger, sp *modularise_config.Splits) error {
 			continue
 		}
 
-		bn := s.Branch
-		if bn == "" {
-			bn = defaultBranchName
-		}
 		if err = s.Repo.Push(&git.PushOptions{Auth: auth}); err != nil {
 			log.WithError(err).Errorf("Failed to push new split content for %q to the remote at %q.", s.Name, s.URL)
 			return err
