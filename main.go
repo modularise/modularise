@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/modularise/modularise/cmd"
@@ -28,7 +27,6 @@ func main() {
 	)
 
 	if err := root.Execute(); err != nil {
-		logrus.WithError(err).Debug("Execution failed.")
 		os.Exit(1)
 	}
 }

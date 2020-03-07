@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/modularise/modularise/cmd/config"
 	"github.com/modularise/modularise/internal/splits"
 	"github.com/modularise/modularise/internal/testlib"
@@ -83,11 +81,7 @@ func TestPseudoVersion(t *testing.T) {
 
 			repo.WriteToDisk(filepath.Join(td, "repo"))
 
-			l := logrus.New()
-			l.SetLevel(logrus.DebugLevel)
-			l.ReportCaller = true
-
-			info, err := Version(l, &config.Split{
+			info, err := Version(testlib.NewTestLogger(), &config.Split{
 				ModulePath: tc.module,
 				DataSplit: splits.DataSplit{
 					WorkDir: repo.Path(),
@@ -193,12 +187,8 @@ func TestBaseVersionForCommit(t *testing.T) {
 
 			repo := testrepo.CreateTestRepo(t, tc.actions)
 
-			l := logrus.New()
-			l.SetLevel(logrus.DebugLevel)
-			l.ReportCaller = true
-
 			bv, err := versioner{
-				log: l,
+				log: testlib.NewTestLogger(),
 				s: &config.Split{
 					DataSplit: splits.DataSplit{
 						WorkDir: repo.Path(),
@@ -303,12 +293,8 @@ func TestTagsForMajor(t *testing.T) {
 
 			repo := testrepo.CreateTestRepo(t, tc.actions)
 
-			l := logrus.New()
-			l.SetLevel(logrus.DebugLevel)
-			l.ReportCaller = true
-
 			tags, err := versioner{
-				log: l,
+				log: testlib.NewTestLogger(),
 				s: &config.Split{
 					DataSplit: splits.DataSplit{
 						WorkDir: repo.Path(),

@@ -11,10 +11,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/modularise/modularise/cmd/config"
 	"github.com/modularise/modularise/internal/filecache"
+	"go.uber.org/zap"
 )
 
 // CleaveSplits will create the content of the configured splits in their respective working
@@ -26,21 +25,21 @@ import (
 //  - WorkTree has been populated and the path in question is an existing directory.
 //  - For each config.Split in Splits the Name, Files, Residuals and ResidualFiles fields have been populated.
 //  - For each config.Split in Splits the WorkDir field is populated and corrresponds to an existing directory.
-func CleaveSplits(log *logrus.Logger, fc filecache.FileCache, sp *config.Splits) error {
+func CleaveSplits(log *zap.Logger, fc filecache.FileCache, sp *config.Splits) error {
 	for _, s := range sp.Splits {
 		s.Root = computeSplitRoot(s.Files)
-		log.Debugf("Computed root %q for split %q containing files %v.", s.Root, s.Name, s.Files)
+		log.Debug("Computed root.", zap.String("split", s.Name), zap.String("root", s.Root), zap.Any("files", s.Files))
 
 		if len(s.Residuals) > 0 {
 			f := filepath.Join(s.Root, "modularise_dummy.go")
 			s.ResidualFiles[f] = true
 			s.ResidualsRoot = computeSplitRoot(s.ResidualFiles)
-			log.Debugf("Computed residuals root %q for split %q using residual files %v.", s.ResidualsRoot, s.Name, s.ResidualFiles)
+			log.Debug("Computed residuals root.", zap.String("split", s.Name), zap.String("root", s.ResidualsRoot), zap.Any("files", s.ResidualFiles))
 			delete(s.ResidualFiles, f)
 		}
 	}
 	for _, s := range sp.Splits {
-		c := cleaver{log: log, fc: fc, s: s, sp: sp}
+		c := cleaver{log: log.With(zap.String("split", s.Name)), fc: fc, s: s, sp: sp}
 		if err := c.cleaveSplit(); err != nil {
 			return err
 		}
@@ -87,14 +86,14 @@ func computeSplitRoot(fs map[string]bool) string {
 }
 
 type cleaver struct {
-	log *logrus.Logger
+	log *zap.Logger
 	fc  filecache.FileCache
 	s   *config.Split
 	sp  *config.Splits
 }
 
 func (c cleaver) cleaveSplit() error {
-	c.log.Debugf("Cleaving split %q with files %v and residuals %v.", c.s.Name, c.s.Files, c.s.Residuals)
+	c.log.Debug("Cleaving split.")
 	for f := range c.s.Files {
 		if err := c.copyFileToWorkDir(f, false); err != nil {
 			return err
@@ -128,10 +127,10 @@ func (c cleaver) copyFileToWorkDir(source string, residual bool) error {
 	}
 	target = filepath.Join(c.s.WorkDir, target)
 
-	c.log.Debugf("Copying over %q for split %q to %q.", source, c.s.Name, target)
+	c.log.Debug("Copying over file.", zap.String("source", source), zap.String("targer", target))
 
 	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
-		c.log.WithError(err).Errorf("Failed to create a new directory %q in split %q.", target, c.s.Name)
+		c.log.Error("Failed to create a new directory.", zap.String("path", target), zap.Error(err))
 		return err
 	}
 
@@ -144,7 +143,7 @@ func (c cleaver) copyFileToWorkDir(source string, residual bool) error {
 		c.rewriteImports(a)
 		buf := bytes.Buffer{}
 		if err = printer.Fprint(&buf, fs, a); err != nil {
-			c.log.WithError(err).Errorf("Failed to format the content for target file %q in split %q.", target, c.s.Name)
+			c.log.Error("Failed to format Go source content.", zap.String("file", target), zap.Error(err))
 			return err
 		}
 		content = buf.Bytes()
@@ -158,15 +157,15 @@ func (c cleaver) copyFileToWorkDir(source string, residual bool) error {
 
 	fd, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		c.log.WithError(err).Errorf("Failed to open file %q in split %q.", target, c.s.Name)
+		c.log.Error("Failed to open file.", zap.String("file", target), zap.Error(err))
 		return err
 	}
 	if _, err = fd.Write(content); err != nil {
-		c.log.WithError(err).Errorf("Failed to write content to file %q in split %q.", target, c.s.Name)
+		c.log.Error("Failed to write file content.", zap.String("file", target), zap.Error(err))
 		return err
 	}
 	if err = fd.Close(); err != nil {
-		c.log.WithError(err).Errorf("Failed to close file %q in split %q after writing its content.", target, c.s.Name)
+		c.log.Error("Failed to close file.", zap.String("file", target), zap.Error(err))
 		return err
 	}
 	return nil
@@ -191,7 +190,7 @@ func (c cleaver) rewriteImports(a *ast.File) {
 				)
 			}
 		}
-		c.log.Debugf("Rewrote import %s to %q.", imp.Path.Value, p)
+		c.log.Debug("Rewrote import.", zap.String("old", imp.Path.Value), zap.String("new", p))
 		imp.Path.Value = fmt.Sprintf(`"%s"`, p)
 	}
 }
@@ -223,15 +222,17 @@ func (c cleaver) copyMetafiles() error {
 		if err != nil {
 			return err
 		}
-		if err = ioutil.WriteFile(filepath.Join(c.s.WorkDir, fn), b, 0644); err != nil {
-			c.log.WithError(err).Errorf("Failed to write metadata file %q to split %q in %q.", fn, c.s.Name, c.s.WorkDir)
+		p := filepath.Join(c.s.WorkDir, fn)
+		if err = ioutil.WriteFile(p, b, 0644); err != nil {
+			c.log.Error("Failed to write metadata file.", zap.String("file", p), zap.Error(err))
 			return err
 		}
 	}
 
 	rmc := fmt.Sprintf(splitReadmeTemplate, c.fc.ModulePath())
-	if err = ioutil.WriteFile(filepath.Join(c.s.WorkDir, "README.md"), []byte(rmc), 0644); err != nil {
-		c.log.WithError(err).Errorf("Failed to write the default README.md file to split %q in %q.", c.s.Name, c.s.WorkDir)
+	p := filepath.Join(c.s.WorkDir, "README.md")
+	if err = ioutil.WriteFile(p, []byte(rmc), 0644); err != nil {
+		c.log.Error("Failed to write the default README.md file.", zap.String("path", p), zap.Error(err))
 		return err
 	}
 	return nil

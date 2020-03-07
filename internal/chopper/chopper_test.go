@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/rogpeppe/go-internal/txtar"
-	"github.com/sirupsen/logrus"
 
 	"github.com/modularise/modularise/cmd/config"
 	"github.com/modularise/modularise/internal/filecache/testcache"
@@ -184,17 +183,13 @@ func TestRewriteImports(t *testing.T) {
 				sp.PkgToSplit[pkg] = b.Name
 			}
 
-			l := logrus.New()
-			l.SetLevel(logrus.DebugLevel)
-			l.ReportCaller = true
-
 			fc, err := testcache.NewFakeFileCache("invalid-root", map[string]testcache.FakeFileCacheEntry{
 				"go.mod": {Data: []byte("module foo.com/bar")},
 			})
 			testlib.NoError(t, true, err)
 
 			c := cleaver{
-				log: l,
+				log: testlib.NewTestLogger(),
 				fc:  fc,
 				s:   &a,
 				sp:  sp,
@@ -240,9 +235,7 @@ func TestCleaveSplit(t *testing.T) {
 			err = txtar.Write(ain, p)
 			testlib.NoError(t, true, err)
 
-			l := logrus.New()
-			l.SetLevel(logrus.DebugLevel)
-			l.ReportCaller = true
+			l := testlib.NewTestLogger()
 
 			fc, err := uncache.NewUncache(l, p)
 			testlib.NoError(t, true, err)

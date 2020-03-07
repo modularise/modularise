@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/modularise/modularise/cmd/config"
 	"github.com/modularise/modularise/internal/filecache"
@@ -13,7 +13,7 @@ import (
 
 // Parse iterates over the configured splits and populates information about their contents. This
 // mostly covers files and Go packages
-func Parse(l *logrus.Logger, fc filecache.FileCache, sp *config.Splits) error {
+func Parse(l *zap.Logger, fc filecache.FileCache, sp *config.Splits) error {
 	if err := parseFiles(l, fc, sp); err != nil {
 		return err
 	}
@@ -31,7 +31,7 @@ func Parse(l *logrus.Logger, fc filecache.FileCache, sp *config.Splits) error {
 	return nil
 }
 
-func parseFiles(l *logrus.Logger, fc filecache.FileCache, sp *config.Splits) error {
+func parseFiles(l *zap.Logger, fc filecache.FileCache, sp *config.Splits) error {
 	files, err := fc.Files()
 	if err != nil {
 		return err
@@ -55,15 +55,14 @@ func parseFiles(l *logrus.Logger, fc filecache.FileCache, sp *config.Splits) err
 		}
 	}
 	sort.Sort(mapping)
-	l.Debugf("Mappings: %+v\n", mapping)
 
 	for f := range files {
 		if s := mapping.matchedSplit(filepath.Dir(f)); s != "" {
 			sp.Splits[s].Files[f] = true
-			l.Debugf("File %q mapped to split %q.", f, s)
-		} else {
-			l.Debugf("File %q not mapped to any split.", f)
 		}
+	}
+	for _, s := range sp.Splits {
+		l.Debug("Computed files of split.", zap.String("split", s.Name), zap.Any("files", s.Files))
 	}
 	return nil
 }

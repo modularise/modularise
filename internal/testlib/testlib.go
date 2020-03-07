@@ -2,12 +2,19 @@ package testlib
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
+
+func NewTestLogger() *zap.Logger {
+	return zap.New(zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), os.Stderr, zap.DebugLevel))
+}
 
 func Equal(t *testing.T, strict bool, expected interface{}, actual interface{}) {
 	if cmp.Equal(expected, actual) {

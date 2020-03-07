@@ -10,8 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/modularise/modularise/cmd/config"
 	"github.com/modularise/modularise/internal/filecache/testcache"
 	"github.com/modularise/modularise/internal/splits"
@@ -26,10 +24,6 @@ func TestCommitChanges(t *testing.T) {
 	testlib.NoError(t, true, err)
 	defer cleanupTestDir(t, td)
 
-	log := logrus.New()
-	log.SetLevel(logrus.DebugLevel)
-	log.SetReportCaller(true)
-
 	fc, err := testcache.NewFakeFileCache("", map[string]testcache.FakeFileCacheEntry{
 		"go.mod": {Data: []byte("module example.com/project\n")},
 	})
@@ -43,7 +37,7 @@ func TestCommitChanges(t *testing.T) {
 	h := repo.Head()
 
 	r := &resolver{
-		log:       log,
+		log:       testlib.NewTestLogger(),
 		fc:        fc,
 		sp:        &config.Splits{},
 		sourceVer: "v0.0.0-sourcever",
@@ -109,12 +103,8 @@ func TestLocalProxy(t *testing.T) {
 		},
 	}
 
-	l := logrus.New()
-	l.SetLevel(logrus.DebugLevel)
-	l.ReportCaller = true
-
 	err = (&resolver{
-		log:        l,
+		log:        testlib.NewTestLogger(),
 		localProxy: proxyPath,
 	}).populateLocalProxy(&split)
 	testlib.NoError(t, true, err)

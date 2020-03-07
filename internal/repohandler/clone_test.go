@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"gopkg.in/src-d/go-git.v4"
 
 	"github.com/modularise/modularise/cmd/config"
@@ -42,11 +41,7 @@ func TestInitRepository(t *testing.T) {
 			testlib.NoError(t, true, err)
 			defer func() { testlib.NoError(t, false, os.RemoveAll(td)) }()
 
-			logger := logrus.New()
-			logger.SetLevel(logrus.DebugLevel)
-			logger.SetReportCaller(true)
-
-			err = initRepository(logger, &config.Split{
+			err = initRepository(testlib.NewTestLogger(), &config.Split{
 				Branch: tc.config,
 				DataSplit: splits.DataSplit{
 					Name:    "a",
@@ -80,13 +75,9 @@ func TestCloneRepository(t *testing.T) {
 
 	he := tr.Head()
 
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
-	logger.SetReportCaller(true)
-
 	testlib.NoError(t, true, os.Mkdir(filepath.Join(td, "target"), 0755))
 
-	err = cloneRepository(logger, &config.Split{
+	err = cloneRepository(testlib.NewTestLogger(), &config.Split{
 		URL:       fmt.Sprintf("file://%s", tr.Path()),
 		DataSplit: splits.DataSplit{Name: "test-split", WorkDir: filepath.Join(td, "target")},
 	}, &config.Splits{})
@@ -137,11 +128,7 @@ func TestInitWorkTree(t *testing.T) {
 }
 
 func testInitWorkTree(t *testing.T, sp *config.Splits) {
-	logger := logrus.New()
-	logger.SetLevel(logrus.DebugLevel)
-	logger.SetReportCaller(true)
-
-	err := initWorkTree(logger, sp)
+	err := initWorkTree(testlib.NewTestLogger(), sp)
 	testlib.NoError(t, true, err)
 	testlib.NotEqual(t, true, "", sp.WorkTree)
 	info, err := os.Stat(sp.WorkTree)

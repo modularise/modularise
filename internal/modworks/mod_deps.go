@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"go.uber.org/zap"
 	"gopkg.in/src-d/go-git.v4"
 
 	"github.com/modularise/modularise/cmd/config"
@@ -25,11 +26,12 @@ func (r *resolver) resolveSplitDeps(s *config.Split) error {
 }
 
 func (r *resolver) cleanupGoMod(s *config.Split) error {
-	r.log.Debugf("Cleaning up go.mod for split %q located in %q.", s.Name, s.WorkDir)
+	modFile := filepath.Join(s.WorkDir, "go.mod")
+	r.log.Debug("Cleaning up go.mod.", zap.String("file", modFile))
 
-	c, err := ioutil.ReadFile(filepath.Join(s.WorkDir, "go.mod"))
+	c, err := ioutil.ReadFile(modFile)
 	if err != nil {
-		r.log.WithError(err).Errorf("Failed to read go.mod for split in %q.", s.WorkDir)
+		r.log.Error("Failed to read go.mod.", zap.String("file", modFile), zap.Error(err))
 		return err
 	}
 	oldMod := strings.Split(string(c), "\n")
@@ -37,14 +39,18 @@ func (r *resolver) cleanupGoMod(s *config.Split) error {
 	newMod := make([]string, 0, len(oldMod))
 	for _, l := range oldMod {
 		if strings.HasSuffix(l, tempReplaceMarker) {
-			r.log.Debugf("Eliminated temporary line %q.", l)
+			r.log.Debug("Eliminated temporary line.", zap.String("line", l))
 			continue
 		}
 
 		for dn := range s.SplitDeps {
 			// We need to filter against the module-path suffixed with a space to deal with nested modules.
 			if strings.HasPrefix(strings.TrimSpace(l), r.sp.Splits[dn].ModulePath+" ") {
-				r.log.Debugf("Adding dependency on split %q at version %q.", dn, r.sp.Splits[dn].Version)
+				r.log.Debug(
+					"Adding dependency on version of split.",
+					zap.String("split-module", r.sp.Splits[dn].ModulePath),
+					zap.String("version", r.sp.Splits[dn].Version),
+				)
 				l = fmt.Sprintf("\t%s %s", r.sp.Splits[dn].ModulePath, r.sp.Splits[dn].Version)
 				break
 			}
@@ -52,14 +58,14 @@ func (r *resolver) cleanupGoMod(s *config.Split) error {
 		newMod = append(newMod, l)
 	}
 
-	if err = ioutil.WriteFile(filepath.Join(s.WorkDir, "go.mod"), []byte(strings.Join(newMod, "\n")), 0644); err != nil {
-		r.log.WithError(err).Errorf("Failed to write modified content of go.mod for split in %q.", s.WorkDir)
+	if err = ioutil.WriteFile(modFile, []byte(strings.Join(newMod, "\n")), 0644); err != nil {
+		r.log.Error("Failed to write modified content of go.mod.", zap.String("file", modFile), zap.Error(err))
 		return err
 	}
 
 	out, err := exec.Command("go", "env", "GOPROXY").CombinedOutput()
 	if err != nil {
-		r.log.WithError(err).Error("Failed to determine current GORPOXY value via 'go env'.")
+		r.log.Error("Failed to determine current GORPOXY value via 'go env'.", zap.Error(err))
 		return err
 	}
 
@@ -76,10 +82,10 @@ func (r *resolver) cleanupGoMod(s *config.Split) error {
 		fmt.Sprintf("GOPROXY=file://%s", r.localProxy),
 	)
 
-	r.log.Debugf("Running 'go mod tidy' on split %q located at %q using definitive versions.", s.Name, s.WorkDir)
+	r.log.Debug("Running 'go mod tidy' using definitive versions.", zap.String("directory", s.WorkDir))
 	out, err = cmd.CombinedOutput()
 	if err != nil {
-		r.log.WithError(err).Errorf("Failed to clean up go.mod for split in %q.\nOutput was:\n%s", s.WorkDir, out)
+		r.log.Error("Failed to clean up go.mod.", zap.String("file", modFile), zap.ByteString("output", out))
 		return err
 	}
 	return nil
@@ -87,24 +93,28 @@ func (r *resolver) cleanupGoMod(s *config.Split) error {
 
 func (r *resolver) commitChanges(s *config.Split) error {
 	if s.Repo == nil {
-		r.log.Errorf("Attempting to push new content for split %q in %q without having initialised a repository.", s.Name, s.WorkDir)
+		r.log.Error(
+			"Attempting to push new split content without having initialised a repository.",
+			zap.String("split", s.Name),
+			zap.String("directory", s.WorkDir),
+		)
 		return fmt.Errorf("split %q in %q has no initialised repository", s.Name, s.WorkDir)
 	}
 
 	wt, err := s.Repo.Worktree()
 	if err != nil {
-		r.log.WithError(err).Errorf("Failed to load the git working tree for split %q at %q.", s.Name, s.WorkDir)
+		r.log.Error("Failed to load a git working tree.", zap.String("directory", s.WorkDir), zap.Error(err))
 		return err
 	}
 
 	if err = wt.AddGlob("."); err != nil {
-		r.log.WithError(err).Errorf("Failed to add new, deleted or modified files to the index in %q.", s.WorkDir)
+		r.log.Error("Failed to add new, deleted or modified files to repository staging area.", zap.String("directory", s.WorkDir), zap.Error(err))
 		return err
 	}
 
 	st, err := wt.Status()
 	if err != nil {
-		r.log.WithError(err).Errorf("Failed to get the git status of the split %q at %q.", s.Name, s.WorkDir)
+		r.log.Error("Failed to get git status.", zap.String("directory", s.WorkDir), zap.Error(err))
 		return err
 	}
 
@@ -127,7 +137,7 @@ func (r *resolver) commitChanges(s *config.Split) error {
 		},
 	)
 	if err != nil {
-		r.log.WithError(err).Errorf("Failed to commit changes to split in %q.", s.WorkDir)
+		r.log.Error("Failed to commit changes.", zap.String("directory", s.WorkDir), zap.Error(err))
 		return err
 	}
 	return nil

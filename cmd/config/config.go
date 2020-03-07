@@ -10,7 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"gopkg.in/yaml.v3"
 
 	"github.com/modularise/modularise/internal/filecache"
@@ -36,7 +37,7 @@ type CLIConfig struct {
 }
 
 type cliConfigData struct {
-	Logger    *logrus.Logger
+	Logger    *zap.Logger
 	Filecache filecache.FileCache
 	Splits    Splits
 }
@@ -72,31 +73,28 @@ func (c *CLIConfig) checkLogger() error {
 		return nil
 	}
 
-	c.Logger = logrus.New()
+	var enc zapcore.Encoder
+	var level zapcore.LevelEnabler
 	if c.Verbose {
-		c.Logger.SetLevel(logrus.DebugLevel)
-		c.Logger.Debug("Enabling debug logging because the '-v | --verbose' flag was set.")
-	} else if _, ok := os.LookupEnv("DEBUG"); ok {
-		c.Logger.SetLevel(logrus.DebugLevel)
-		c.Logger.Debug("Enabling debug logging because the DEBUG environment variable is set.")
-	} else if val, ok := os.LookupEnv("LOG_LEVEL"); ok {
-		lvl, err := logrus.ParseLevel(val)
-		if err != nil {
-			c.Logger.WithError(err).Errorf("Could not parse value of LOG_LEVEL environment variable (%s) as a valid log level.", val)
-			return err
-		}
-		c.Logger.SetLevel(lvl)
+		enc = zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
+		level = zapcore.DebugLevel
+	} else {
+		enc = zapcore.NewConsoleEncoder(zap.NewProductionEncoderConfig())
+		level = zapcore.InfoLevel
 	}
 
-	c.Logger.Debugf("Further log output will be written to %q.", c.LogFile)
+	var out zapcore.WriteSyncer
 	if c.LogFile != "" {
 		f, err := os.OpenFile(c.LogFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY|os.O_EXCL, 0644)
 		if err != nil {
-			c.Logger.WithError(err).Errorf("Failed to open %q to write log output.", c.LogFile)
 			return err
 		}
-		c.Logger.SetOutput(f)
+		out = f
+	} else {
+		out = os.Stdout
 	}
+
+	c.Logger = zap.New(zapcore.NewCore(enc, out, level))
 	return nil
 }
 
@@ -107,21 +105,21 @@ func (c *CLIConfig) checkConfigFile() error {
 		}
 	}
 
-	c.Logger.Debugf("Reading configuration file %q.", c.ConfigFile)
+	c.Logger.Debug("Reading configuration file.", zap.String("file", c.ConfigFile))
 	cb, err := ioutil.ReadFile(c.ConfigFile)
 	if err != nil {
-		c.Logger.WithError(err).Errorf("Unable to read content of configuration file %q.", c.ConfigFile)
+		c.Logger.Error("Unable to read content of configuration file %q.", zap.String("file", c.ConfigFile), zap.Error(err))
 		return err
 	}
 
-	c.Logger.Debugf("Parsing configuration file content:\n%s", cb)
+	c.Logger.Debug("Parsing configuration file content.", zap.String("file", c.ConfigFile), zap.ByteString("configuration", cb))
 	if err = yaml.Unmarshal(cb, &c.Splits); err != nil {
-		c.Logger.WithError(err).Errorf("Unable to parse configuration file %q.", c.ConfigFile)
+		c.Logger.Error("Unable to parse configuration file.", zap.String("file", c.ConfigFile), zap.Error(err))
 		return err
 	}
 
 	if len(c.Splits.Splits) == 0 {
-		c.Logger.Errorf("No splits were found in configuration file %q.", c.ConfigFile)
+		c.Logger.Error("No splits were found in configuration file.", zap.String("file", c.ConfigFile), zap.Error(err))
 		return fmt.Errorf("%q does not contain any configured splits", c.ConfigFile)
 	}
 	return nil
@@ -134,27 +132,27 @@ func (c *CLIConfig) findConfigFile() error {
 	c.Logger.Debug("Running 'go list -m -json' to determine the current module root for the default configuration file location.")
 	out, err := exec.CommandContext(ctx, "go", "list", "-m", "-json").CombinedOutput()
 	if err != nil {
-		c.Logger.WithError(err).Error("Could not determine Go module for the current directory. Are you sure you are inside the target module?")
+		c.Logger.Error("Could not determine Go module for the current directory. Are you sure you are inside the target module?", zap.Error(err))
 		return fmt.Errorf("failed to run 'go list -m -json': %v\noutput was:\n%s", err, out)
 	}
 
-	c.Logger.Debugf("'go list -m -json' returned:\n%s", out)
+	c.Logger.Debug("'go list -m -json' returned.", zap.ByteString("output", out))
 	mi := uncache.ModuleInfo{}
 	if err = json.Unmarshal(out, &mi); err != nil {
-		c.Logger.WithError(err).Errorf("Could not parse result of 'go list -m -json': %s", out)
+		c.Logger.Error("Could not parse result of 'go list -m -json': %s", zap.ByteString("output", out), zap.Error(err))
 		return err
 	}
 	p := filepath.Join(mi.Dir, "modularise.yaml")
 
 	info, err := os.Stat(p)
 	if err != nil && !os.IsNotExist(err) {
-		c.Logger.WithError(err).Errorf("Encountered an unexpected error while testing existence of %q.", p)
+		c.Logger.Error("Encountered an unexpected error while testing file existence.", zap.String("path", p), zap.Error(err))
 		return err
 	} else if os.IsNotExist(err) || info.IsDir() {
-		c.Logger.Errorf("No configuration file was found at %q.", p)
+		c.Logger.Error("No configuration file was found.", zap.String("path", p))
 	}
 
 	c.ConfigFile = p
-	c.Logger.Infof("Using Modularise configuration file at default location %q.", p)
+	c.Logger.Info("Using Modularise configuration file at default location.", zap.String("path", p))
 	return nil
 }

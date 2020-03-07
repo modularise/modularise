@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/rogpeppe/go-internal/txtar"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 	yaml "gopkg.in/yaml.v3"
 
 	"github.com/modularise/modularise/cmd/config"
@@ -27,7 +27,7 @@ type testSpec struct {
 	expected resultSpec
 
 	// Internal details.
-	logger  *logrus.Logger
+	logger  *zap.Logger
 	files   *txtar.Archive
 	workDir string
 }
@@ -49,12 +49,10 @@ func TestIntegration_Parse(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			t.Parallel()
 
-			l := logrus.New()
-			l.SetLevel(logrus.DebugLevel)
 			ts := &testSpec{
 				t:        t,
 				name:     n,
-				logger:   l,
+				logger:   testlib.NewTestLogger(),
 				scenario: s,
 			}
 			ts.workDir, err = ioutil.TempDir("", "modularise")

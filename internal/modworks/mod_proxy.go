@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"unicode"
 
+	"go.uber.org/zap"
 	"golang.org/x/mod/module"
 	"golang.org/x/mod/zip"
 
@@ -31,19 +32,19 @@ func (r *resolver) populateLocalProxy(s *config.Split) error {
 	}
 	proxyPath := filepath.Join(r.localProxy, filepath.FromSlash(moduleCachePath), "@v")
 	if err = os.MkdirAll(proxyPath, 0755); err != nil {
-		r.log.WithError(err).Errorf("Failed to create local proxy storage directory at %q.", proxyPath)
+		r.log.Error("Failed to create local proxy storage directory.", zap.String("directory", proxyPath), zap.Error(err))
 		return err
 	}
 
 	// Info file for hash redirection.
 	ji, err := json.Marshal(&info)
 	if err != nil {
-		r.log.WithError(err).Errorf("Failed to marshal the .info file '%+v' for split located at %q.", info, s.WorkDir)
+		r.log.Error("Failed to marshal .info file.", zap.String("split", s.Name), zap.Any("content", info), zap.Error(err))
 		return err
 	}
 	p := filepath.Join(proxyPath, fmt.Sprintf("%s.info", info.Hash))
 	if err = ioutil.WriteFile(p, ji, 0644); err != nil {
-		r.log.WithError(err).Errorf("Failed to write the .info file for split located at %q to %q.", s.Name, p)
+		r.log.Error("Failed to write .info file.", zap.String("path", p), zap.Error(err))
 		return err
 	}
 
@@ -51,25 +52,35 @@ func (r *resolver) populateLocalProxy(s *config.Split) error {
 	mp := filepath.Join(s.WorkDir, "go.mod")
 	mc, err := ioutil.ReadFile(mp)
 	if err != nil {
-		r.log.WithError(err).Errorf("Failed to read %q.", mp)
+		r.log.Error("Failed to read file.", zap.String("file", mp), zap.Error(err))
 		return err
 	}
 	p = filepath.Join(proxyPath, fmt.Sprintf("%s.mod", info.Version))
 	if err = ioutil.WriteFile(p, mc, 0644); err != nil {
-		r.log.WithError(err).Errorf("Failed to write mod file to temporary module proxy for \"%s@%s\" of split %q.", s.ModulePath, info.Version, s.Name)
+		r.log.Error(
+			"Failed to write mod file to temporary module proxy.",
+			zap.String("module", s.ModulePath),
+			zap.String("version", info.Version),
+			zap.Error(err),
+		)
 		return err
 	}
 
 	p = filepath.Join(proxyPath, fmt.Sprintf("%s.zip", info.Version))
 	var zf *os.File
 	if zf, err = os.OpenFile(p, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644); err != nil {
-		r.log.WithError(err).Errorf("Failed to open a new file at %q.", p)
+		r.log.Error("Failed to open a new file.", zap.String("file", p))
 		return err
 	}
 	defer func() { _ = zf.Close() }()
 
 	if err = zip.CreateFromDir(zf, module.Version{Path: s.ModulePath, Version: info.Version}, s.WorkDir); err != nil {
-		r.log.WithError(err).Errorf("Failed to zip content of split %q at %q into archive at %q.", s.Name, s.WorkDir, p)
+		r.log.Error(
+			"Failed to zip content of split into cache archive.",
+			zap.String("directory", s.WorkDir),
+			zap.String("archive", p),
+			zap.Error(err),
+		)
 		return err
 	}
 	return nil

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/modularise/modularise/cmd/config"
 	"github.com/modularise/modularise/internal/filecache"
@@ -21,7 +21,7 @@ import (
 // The prequisites on the fields of a config.Splits object for CleaveSplits to be able to operate
 // are:
 //  - For each config.Split in Splits the Name and Files fields have been populated.
-func ComputeResiduals(l *logrus.Logger, fc filecache.FileCache, s *config.Splits) error {
+func ComputeResiduals(l *zap.Logger, fc filecache.FileCache, s *config.Splits) error {
 	pkgs, err := fc.Pkgs()
 	if err != nil {
 		return err
@@ -45,15 +45,15 @@ func ComputeResiduals(l *logrus.Logger, fc filecache.FileCache, s *config.Splits
 		fail = true
 		msgs := map[string]bool{}
 		for _, err := range a.errs {
-			if l.GetLevel() < logrus.DebugLevel {
+			if l.Core().Enabled(zap.DebugLevel) {
 				msgs[err.Error()] = true
 			} else {
 				msgs[err.Details()] = true
 			}
 		}
-		l.Errorf("Detected errors while computing residuals for split %q:", v.Name)
+		l.Error("Detected errors while computing split residuals:")
 		for msg := range msgs {
-			l.Errorf(" - %s", msg)
+			l.Error(" - " + msg)
 		}
 	}
 
@@ -64,7 +64,7 @@ func ComputeResiduals(l *logrus.Logger, fc filecache.FileCache, s *config.Splits
 }
 
 type analyser struct {
-	log *logrus.Logger
+	log *zap.Logger
 	fc  filecache.FileCache
 	s   *config.Split
 	sp  *config.Splits
@@ -77,16 +77,17 @@ type analyser struct {
 }
 
 func (a *analyser) analyseSplit() error {
-	a.log.Debugf("Analysing split %q for residuals.", a.s.Name)
+	a.log.Debug("Analyzing split.", zap.String("split", a.s.Name))
 
 	a.s.Residuals = map[string]bool{}
 	a.s.SplitDeps = map[string]bool{}
 	for f := range a.s.Files {
 		if filepath.Ext(f) != ".go" {
-			a.log.Debugf("Skipping analysis of %q in split %q as it's not a Go source file.", f, a.s.Name)
+			a.log.Debug("Skipping analysis of non-Go file.", zap.String("file", f))
 			continue
 		}
-		a.log.Debugf("Analysing %q part of split %q for residuals.", f, a.s.Name)
+		a.log.Debug("Analysing file for residuals.", zap.String("file", f))
+
 		fa, fs, err := a.fc.ReadGoFile(f)
 		if err != nil {
 			return err
@@ -116,8 +117,6 @@ func (a *analyser) computeSplitDepsAndResiduals(imports []*ast.ImportSpec) error
 	}
 
 	for _, imp := range imports {
-		a.log.Debugf("Considering import of %q.", imp.Path.Value)
-
 		p := strings.Trim(imp.Path.Value, `"`)
 		n := filepath.Base(p)
 		if imp.Name != nil {
@@ -130,10 +129,15 @@ func (a *analyser) computeSplitDepsAndResiduals(imports []*ast.ImportSpec) error
 		}
 
 		if ts := a.sp.PkgToSplit[p]; ts != "" && ts != a.s.Name {
-			a.log.Debugf("Import of %q induces a dependency from split %q on split %q.", imp.Path.Value, a.s.Name, ts)
+			a.log.Debug(
+				"Inter-split dependency detected.",
+				zap.String("import", imp.Path.Value),
+				zap.String("source", a.s.Name),
+				zap.String("target", ts),
+			)
 			a.s.SplitDeps[ts] = true
 		} else if ts == "" {
-			a.log.Debugf("Import of %q results in the package being a residual of split %q.", imp.Path.Value, a.s.Name)
+			a.log.Debug("Residual detected.", zap.String("split", a.s.Name), zap.String("residual", imp.Path.Value))
 			a.s.Residuals[p] = true
 		}
 	}
@@ -141,7 +145,6 @@ func (a *analyser) computeSplitDepsAndResiduals(imports []*ast.ImportSpec) error
 }
 
 func (a *analyser) analyseFile(f *ast.File) {
-	a.log.Debugf("Parsing file %q of package %q for residuals.", a.fs.Position(f.Pos()).Filename, f.Name)
 	for _, tld := range f.Decls {
 		switch td := tld.(type) {
 		case *ast.FuncDecl:
@@ -187,8 +190,6 @@ func (a *analyser) analyseFile(f *ast.File) {
 						}
 					}
 				}
-			default:
-				a.log.Debugf("Skipping top-level declaration %q at '%v' as it can't contain residuals.", td.Tok, a.fs.Position(td.TokPos))
 			}
 		}
 	}
@@ -314,33 +315,30 @@ func (a *analyser) computeIndirectDependencies() error {
 	for len(todo) > 0 {
 		f := todo[0]
 		todo = todo[1:]
-		a.log.Debugf("Parsing residual file %q for indirect dependencies.", f)
+		a.log.Debug("Parsing residual file for indirect dependencies.", zap.String("file", f))
 
-		fa, fs, err := a.fc.ReadGoFile(f)
+		fa, _, err := a.fc.ReadGoFile(f)
 		if err != nil {
 			return err
 		}
 
 		for _, imp := range fa.Imports {
 			p := strings.Trim(imp.Path.Value, "\"")
-			a.log.Debugf("Considering import of %q in (in)direct residual at %q", p, fs.Position(imp.Pos()))
 			if a.s.Residuals[p] {
-				a.log.Debugf("Skipping as the package is already a residual of split %q.", a.s.Name)
 				continue
 			} else if !a.pkgs[p] {
 				continue
 			}
 
 			if ts := a.sp.PkgToSplit[p]; ts == a.s.Name {
-				a.log.Debugf("Import of %q is internal to split %q.", p, ts)
 				continue
 			} else if ts != "" {
-				a.log.Debugf("Import of %q results in a dependency from split %q on split %q.", p, a.s.Name, ts)
+				a.log.Debug("Inter-split dependency detected.", zap.String("import", p), zap.String("source", a.s.Name), zap.String("target", ts))
 				a.s.SplitDeps[ts] = true
 				continue
 			}
 
-			a.log.Debugf("Import of %q results in it becoming a residual of split %q.", p, a.s.Name)
+			a.log.Debug("Residual detected.", zap.String("split", a.s.Name), zap.String("residual", p))
 			a.s.Residuals[p] = true
 
 			pkgFiles, err := a.fc.FilesInPkg(p)

@@ -8,8 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/modularise/modularise/cmd/config"
 	"github.com/modularise/modularise/internal/filecache/testcache"
 	"github.com/modularise/modularise/internal/splits"
@@ -151,16 +149,12 @@ var MyVar pkg.ExportedType
 		t.Run(n, func(t *testing.T) {
 			t.Parallel()
 
-			l := logrus.New()
-			l.SetLevel(logrus.DebugLevel)
-			l.ReportCaller = true
-
 			pkgToSplit := tc.pkgTosplit
 			if pkgToSplit == nil {
 				pkgToSplit = map[string]string{}
 			}
 			a := &analyser{
-				log:     l,
+				log:     testlib.NewTestLogger(),
 				fs:      token.NewFileSet(),
 				imports: map[string]string{"pkg": testPkg},
 				pkgs:    map[string]bool{testPkg: true},
@@ -241,16 +235,12 @@ func TestType(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			t.Parallel()
 
-			l := logrus.New()
-			l.SetLevel(logrus.DebugLevel)
-			l.ReportCaller = true
-
 			pkgToSplit := tc.pkgTosplit
 			if pkgToSplit == nil {
 				pkgToSplit = map[string]string{}
 			}
 			a := &analyser{
-				log:     l,
+				log:     testlib.NewTestLogger(),
 				fs:      token.NewFileSet(),
 				imports: map[string]string{"pkg": testPkg},
 				pkgs:    map[string]bool{testPkg: true},
@@ -360,10 +350,6 @@ func TestResolveImportsAndResiduals(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			t.Parallel()
 
-			l := logrus.New()
-			l.SetLevel(logrus.DebugLevel)
-			l.ReportCaller = true
-
 			fe := map[string]testcache.FakeFileCacheEntry{}
 			for _, i := range tc.imports {
 				fe[strings.TrimPrefix(filepath.Join(i.Path.Value, "file.go"), testModulePath+"/")] = testcache.FakeFileCacheEntry{}
@@ -374,7 +360,7 @@ func TestResolveImportsAndResiduals(t *testing.T) {
 			testlib.NoError(t, true, err)
 
 			a := analyser{
-				log:     l,
+				log:     testlib.NewTestLogger(),
 				fc:      fc,
 				imports: map[string]string{},
 				s: &config.Split{DataSplit: splits.DataSplit{

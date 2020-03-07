@@ -3,8 +3,6 @@ package parser
 import (
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/modularise/modularise/cmd/config"
 	"github.com/modularise/modularise/internal/filecache/testcache"
 	"github.com/modularise/modularise/internal/testlib"
@@ -113,14 +111,10 @@ func TestUnit_ParseUnit(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			t.Parallel()
 
-			l := logrus.New()
-			l.SetLevel(logrus.DebugLevel)
-			l.ReportCaller = true
-
 			fc, err := testcache.NewFakeFileCache("fake-cache-dir", tc.files)
 			testlib.NoError(t, true, err)
 
-			err = Parse(l, fc, &tc.splits)
+			err = Parse(testlib.NewTestLogger(), fc, &tc.splits)
 			testlib.NoError(t, true, err)
 
 			testlib.True(t, true, len(tc.splits.Splits) == len(tc.expected))

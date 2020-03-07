@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 	"gopkg.in/src-d/go-billy.v4/osfs"
 	"gopkg.in/src-d/go-git.v4"
 	gitconfig "gopkg.in/src-d/go-git.v4/config"
@@ -32,7 +32,7 @@ const (
 //  - The WorkTree field is populated and corresponds to an existing directory.
 //  - For each config.Split in Splits the Name field has been populated.
 //  - For each config.Split in Splits the WorkDir field is either unpopulated or it corrresponds to a non-existing or empty directory.
-func InitSplits(log *logrus.Logger, sp *config.Splits) error {
+func InitSplits(log *zap.Logger, sp *config.Splits) error {
 	if err := initWorkTree(log, sp); err != nil {
 		return err
 	}
@@ -45,24 +45,24 @@ func InitSplits(log *logrus.Logger, sp *config.Splits) error {
 	return nil
 }
 
-func initWorkTree(log *logrus.Logger, sp *config.Splits) error {
+func initWorkTree(log *zap.Logger, sp *config.Splits) error {
 	if sp.WorkTree == "" {
 		td, err := ioutil.TempDir("", "modularise-splits")
 		if err != nil {
-			log.WithError(err).Error("Failed to instantiate a temporary directory to store split data.")
+			log.Error("Failed to instantiate a temporary directory to store split data.", zap.Error(err))
 			return err
 		}
 		sp.WorkTree = td
 	} else {
 		if err := os.RemoveAll(sp.WorkTree); err != nil {
-			log.WithError(err).Errorf("Failed to clean out existing content of work directory %q.", sp.WorkTree)
+			log.Error("Failed to clean out existing content of working tree.", zap.String("directory", sp.WorkTree), zap.Error(err))
 			return err
 		}
 		if err := os.MkdirAll(sp.WorkTree, 0755); err != nil {
-			log.WithError(err).Errorf("Failed to (re)create the specified work directory %q.", sp.WorkTree)
+			log.Error("Failed to (re)create the specified working tree.", zap.String("directory", sp.WorkTree), zap.Error(err))
 		}
 	}
-	log.Debugf("Using directory %q for split data.", sp.WorkTree)
+	log.Debug("Created split data directory.", zap.String("directory", sp.WorkTree))
 
 	for _, s := range sp.Splits {
 		s.WorkDir = filepath.Join(sp.WorkTree, s.Name)
@@ -73,34 +73,51 @@ func initWorkTree(log *logrus.Logger, sp *config.Splits) error {
 	return nil
 }
 
-func initSplitDir(log *logrus.Logger, s *config.Split) error {
+func initSplitDir(log *zap.Logger, s *config.Split) error {
 	if _, err := os.Stat(s.WorkDir); err == nil {
-		log.Errorf("Can not use directory %q to store data for split %q as it already exists.", s.WorkDir, s.Name)
+		log.Error(
+			"Can not use directory to store data for split as it already exists.",
+			zap.String("split", s.Name),
+			zap.String("directory", s.WorkDir),
+		)
 		return fmt.Errorf("directory %q already exists", s.WorkDir)
 	} else if !os.IsNotExist(err) {
-		log.WithError(err).Errorf("Failed to assert that work directory %q for split %q exists.", s.WorkDir, s.Name)
+		log.Error(
+			"Failed to assert that work directory for split exists.",
+			zap.String("split", s.Name),
+			zap.String("directory", s.WorkDir),
+			zap.Error(err),
+		)
 		return err
 	}
 
 	if err := os.Mkdir(s.WorkDir, 0755); err != nil {
-		log.WithError(err).Errorf("Failed to create directory %q to store data for split %q.", s.WorkDir, s.Name)
+		log.Error(
+			"Failed to create directory to store data for split.",
+			zap.String("split", s.Name),
+			zap.String("directory", s.WorkDir),
+			zap.Error(err),
+		)
 		return err
 	}
 
-	log.Debugf("Using directory %q to store data for split %q.", s.WorkDir, s.Name)
+	log.Debug("Created directory to store data for split.", zap.String("split", s.Name), zap.String("directory", s.WorkDir))
 	return nil
 }
 
-func cloneRepository(log *logrus.Logger, s *config.Split, sp *config.Splits) error {
+func cloneRepository(log *zap.Logger, s *config.Split, sp *config.Splits) error {
 	if s.URL == "" {
-		log.Infof("No remote configured for split %q. It won't be synced to a Git repository but its content will be stored at %q.", s.Name, s.WorkDir)
+		log.Info(
+			"No remote configured for split. It won't be synced to a Git repository but its content will be stored locally.",
+			zap.String("split", s.Name),
+			zap.String("directory", s.WorkDir),
+		)
 		return initRepository(log, s, sp)
 	}
 
-	log.Debugf("Extracting authentication information from config %v.", sp.Credentials)
 	auth, err := sp.Credentials.ExtractAuth()
 	if err != nil {
-		log.WithError(err).Error("Could not setup authentication for Git operations.")
+		log.Error("Could not determine authentication for Git operations.", zap.Error(err))
 		return err
 	}
 
@@ -108,7 +125,7 @@ func cloneRepository(log *logrus.Logger, s *config.Split, sp *config.Splits) err
 	if bn == "" {
 		bn = defaultBranchName
 	}
-	log.Debugf("Cloning remote repository from %q into %q for split %q.", s.URL, s.WorkDir, s.Name)
+	log.Debug("Cloning remote repository.", zap.String("directory", s.WorkDir), zap.String("url", s.URL))
 	r, err := git.PlainClone(
 		s.WorkDir,
 		false,
@@ -122,21 +139,21 @@ func cloneRepository(log *logrus.Logger, s *config.Split, sp *config.Splits) err
 	if err == transport.ErrEmptyRemoteRepository {
 		return initRepository(log, s, sp)
 	} else if err != nil {
-		log.WithError(err).Errorf("Failed to clone the remote repository from %q into %q for split %q.", s.URL, s.WorkDir, s.Name)
+		log.Error("Failed to clone repository.", zap.String("directory", s.WorkDir), zap.String("url", s.URL), zap.Error(err))
 		return err
 	}
 	s.Repo = r
 
 	wt, err := s.Repo.Worktree()
 	if err != nil {
-		log.WithError(err).Errorf("Failed to open working tree of git repository for split %q located at %q.", s.Name, s.WorkDir)
+		log.Error("Failed to open a git repository's working tree.", zap.String("directory", s.WorkDir), zap.Error(err))
 		return err
 	}
 
-	log.Debugf("Cleaning out all existing content from git repository at %q for split %q.", s.WorkDir, s.Name)
+	log.Debug("Cleaning out all existing content from git repository.", zap.String("directory", s.WorkDir))
 	tld, err := wt.Filesystem.ReadDir(".")
 	if err != nil {
-		log.WithError(err).Errorf("Failed to read the content of the git working tree at %q for split %q.", s.WorkDir, s.Name)
+		log.Error("Failed to read the content of a git working tree.", zap.String("directory", s.WorkDir), zap.Error(err))
 		return err
 	}
 
@@ -152,36 +169,37 @@ func cloneRepository(log *logrus.Logger, s *config.Split, sp *config.Splits) err
 		// We need to use the 'os.RemoveAll()' method instead of 'wt.Filesystem.Remove()' because
 		// the latter will result in errors on non-empty directories.
 		if err = os.RemoveAll(filepath.Join(wt.Filesystem.Root(), tle.Name())); err != nil {
-			log.WithError(err).Errorf("Failed to clean out top-level %q in git working tree at %q for split %q.", tle.Name(), s.WorkDir, s.Name)
+			log.Error(
+				"Failed to clean out top-level element in git working tree.", zap.String("path", tle.Name()), zap.Error(err))
 			return err
 		}
 	}
 	return nil
 }
 
-func initRepository(log *logrus.Logger, s *config.Split, sp *config.Splits) error {
+func initRepository(log *zap.Logger, s *config.Split, sp *config.Splits) error {
 	r, err := git.Init(filesystem.NewStorage(osfs.New(filepath.Join(s.WorkDir, ".git")), cache.NewObjectLRUDefault()), osfs.New(s.WorkDir))
 	if err != nil {
-		log.WithError(err).Errorf("Failed to initialise a new git repository in %q.", s.WorkDir)
+		log.Error("Failed to initialise a new git repository.", zap.String("directory", s.WorkDir), zap.Error(err))
 		return err
 	}
 
 	wt, err := r.Worktree()
 	if err != nil {
-		log.WithError(err).Errorf("Failed to obtain the worktree of the new git repository in %q.", s.WorkDir)
+		log.Error("Failed to obtain the worktree of a git repository.", zap.String("directory", s.WorkDir), zap.Error(err))
 		return err
 	}
 
 	// We need to create an initial commit for references to be populated.
 	h, err := wt.Commit("Initial commit", &git.CommitOptions{Author: sp.Author.ExtractAuthor()})
 	if err != nil {
-		log.WithError(err).Errorf("Failed to create initial empty commit in new git repository in %q.", s.WorkDir)
+		log.Error("Failed to create initial empty commit in git repository.", zap.String("directory", s.WorkDir), zap.Error(err))
 		return err
 	}
 
 	var gc *gitconfig.Config
 	if gc, err = r.Config(); err != nil {
-		log.WithError(err).Errorf("Failed to read configuration of new git repository in %q.", s.WorkDir)
+		log.Error("Failed to read configuration of git repository.", zap.String("directory", s.WorkDir), zap.Error(err))
 		return err
 	}
 
@@ -197,11 +215,17 @@ func initRepository(log *logrus.Logger, s *config.Split, sp *config.Splits) erro
 
 	brn := plumbing.NewBranchReferenceName(bn)
 	if err = r.Storer.SetReference(plumbing.NewHashReference(brn, h)); err != nil {
-		log.WithError(err).Errorf("Failed to set reference for branch %q to hash %q in new git repository in %q.", bn, h, s.WorkDir)
+		log.Error(
+			"Failed to set reference for branch to hash in git repository.",
+			zap.String("directory", s.WorkDir),
+			zap.String("branch", br.Name),
+			zap.String("hash", h.String()),
+			zap.Error(err),
+		)
 		return err
 	}
 	if err = wt.Checkout(&git.CheckoutOptions{Branch: brn}); err != nil {
-		log.WithError(err).Errorf("Failed to checkout branch %q in new git repository in %q.", s.Branch, s.WorkDir)
+		log.Error("Failed to checkout branch in git repository.", zap.String("directory", s.WorkDir), zap.String("branch", br.Name), zap.Error(err))
 		return err
 	}
 
@@ -218,12 +242,12 @@ func initRepository(log *logrus.Logger, s *config.Split, sp *config.Splits) erro
 
 	gcb, err := gc.Marshal()
 	if err != nil {
-		log.WithError(err).Errorf("Failed to marshal updated git configuration for repository in %q. Config:\n%+v", s.WorkDir, gc)
+		log.Error("Failed to marshal updated git configuration", zap.Any("configuratio", gc), zap.Error(err))
 		return err
 	}
 	gcp := filepath.Join(s.WorkDir, ".git", "config")
 	if err = ioutil.WriteFile(gcp, gcb, 0644); err != nil {
-		log.WithError(err).Errorf("Failed to write updated git configuation for repository to %q.", gcp)
+		log.Error("Failed to write updated git configuration to disk.", zap.String("file", gcp), zap.Error(err))
 		return err
 	}
 

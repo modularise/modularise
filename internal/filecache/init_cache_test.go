@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/rogpeppe/go-internal/txtar"
-	"github.com/sirupsen/logrus"
 
 	"github.com/modularise/modularise/internal/filecache/cache"
 	"github.com/modularise/modularise/internal/filecache/testcache"
@@ -111,11 +110,7 @@ func populateCache(a *txtar.Archive) (c *cache.Cache, err error) {
 		return nil, err
 	}
 
-	l := logrus.New()
-	l.SetLevel(logrus.DebugLevel)
-	l.ReportCaller = true
-
-	c, err = cache.NewCache(l, cd)
+	c, err = cache.NewCache(testlib.NewTestLogger(), cd)
 	if err != nil {
 		return nil, err
 	}
@@ -141,11 +136,7 @@ func populateUncache(a *txtar.Archive) (c *uncache.Uncache, err error) {
 		return nil, err
 	}
 
-	l := logrus.New()
-	l.SetLevel(logrus.DebugLevel)
-	l.ReportCaller = true
-
-	c, err = uncache.NewUncache(l, cd)
+	c, err = uncache.NewUncache(testlib.NewTestLogger(), cd)
 	if err != nil {
 		return nil, err
 	}
