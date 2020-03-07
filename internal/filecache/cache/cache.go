@@ -138,6 +138,9 @@ func (c *Cache) ReadFile(path string) ([]byte, error) {
 		c.log.Error("File does not exist or is not part of module.", zap.String("file", path), zap.String("module", c.path))
 		return nil, fmt.Errorf("could not access %s", path)
 	}
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
 	if c.fileData[path] == nil {
 		b, err := ioutil.ReadFile(filepath.Join(c.root, path))
 		if err != nil {

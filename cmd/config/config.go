@@ -15,7 +15,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/modularise/modularise/internal/filecache"
-	"github.com/modularise/modularise/internal/filecache/uncache"
+	"github.com/modularise/modularise/internal/filecache/cache"
 )
 
 type CLIConfig struct {
@@ -59,7 +59,7 @@ func (c *CLIConfig) CheckConfig() error {
 		s.Name = n
 	}
 
-	fc, err := uncache.NewUncache(c.Logger, filepath.Dir(c.ConfigFile))
+	fc, err := cache.NewCache(c.Logger, filepath.Dir(c.ConfigFile))
 	if err != nil {
 		return err
 	}
@@ -137,7 +137,7 @@ func (c *CLIConfig) findConfigFile() error {
 	}
 
 	c.Logger.Debug("'go list -m -json' returned.", zap.ByteString("output", out))
-	mi := uncache.ModuleInfo{}
+	mi := cache.ModuleInfo{}
 	if err = json.Unmarshal(out, &mi); err != nil {
 		c.Logger.Error("Could not parse result of 'go list -m -json': %s", zap.ByteString("output", out), zap.Error(err))
 		return err
