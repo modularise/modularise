@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"go.uber.org/zap"
 )
@@ -83,19 +84,22 @@ func NewCache(log *zap.Logger, root string) (*Cache, error) {
 }
 
 type Cache struct {
-	log      *zap.Logger
-	root     string
-	path     string
-	files    map[string]bool
-	pkgs     map[string]bool
+	log  *zap.Logger
+	root string
+	path string
+
+	files map[string]bool
+	pkgs  map[string]bool
+
+	lock     sync.Mutex
 	fileData map[string][]byte
 }
 
-func (c Cache) Root() string {
+func (c *Cache) Root() string {
 	return c.root
 }
 
-func (c Cache) ModulePath() string {
+func (c *Cache) ModulePath() string {
 	return c.path
 }
 

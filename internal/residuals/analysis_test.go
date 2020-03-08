@@ -1,11 +1,8 @@
 package residuals
 
 import (
-	"go/ast"
 	"go/parser"
 	"go/token"
-	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/modularise/modularise/cmd/config"
@@ -265,131 +262,6 @@ func TestType(t *testing.T) {
 			testlib.NoError(t, true, err)
 
 			testlib.Equal(t, false, tc.errs, az.analyseCompositeType(a, e))
-		})
-	}
-}
-
-func TestResolveImportsAndResiduals(t *testing.T) {
-	t.Parallel()
-
-	const testModulePath = "example.com/repo"
-	pkgPath := func(p string) string { return filepath.Join(testModulePath, p) }
-	depSplitA := &config.Split{DataSplit: splits.DataSplit{Name: "a"}}
-	depSplitB := &config.Split{DataSplit: splits.DataSplit{Name: "b"}}
-
-	tcs := map[string]struct {
-		imports           []*ast.ImportSpec
-		pkgToSplit        map[string]string
-		expectedImports   map[string]string
-		expectedResiduals map[string]bool
-		expectedSplitDeps map[string]bool
-	}{
-		"NoImports": {
-			imports:           nil,
-			pkgToSplit:        map[string]string{},
-			expectedImports:   map[string]string{},
-			expectedResiduals: map[string]bool{},
-			expectedSplitDeps: map[string]bool{},
-		},
-		"ThirdPartyImports": {
-			imports: []*ast.ImportSpec{
-				{Path: &ast.BasicLit{Value: `"third-party.com/module"`}},
-			},
-			pkgToSplit: map[string]string{
-				pkgPath("bar"): depSplitA.Name,
-			},
-			expectedImports: map[string]string{
-				"module": "third-party.com/module",
-			},
-			expectedResiduals: map[string]bool{},
-			expectedSplitDeps: map[string]bool{},
-		},
-		"NoResiduals": {
-			imports: []*ast.ImportSpec{
-				{Path: &ast.BasicLit{Value: pkgPath("bar")}},
-				{Name: ast.NewIdent("renamed"), Path: &ast.BasicLit{Value: pkgPath("bar/bar")}},
-			},
-			pkgToSplit: map[string]string{
-				pkgPath("bar"):     depSplitA.Name,
-				pkgPath("bar/bar"): depSplitA.Name,
-			},
-			expectedImports: map[string]string{
-				"bar":     pkgPath("bar"),
-				"renamed": pkgPath("bar/bar"),
-			},
-			expectedResiduals: map[string]bool{},
-			expectedSplitDeps: map[string]bool{},
-		},
-		"Residuals": {
-			imports: []*ast.ImportSpec{
-				{Path: &ast.BasicLit{Value: pkgPath("bar")}},
-				{Name: ast.NewIdent("renamed"), Path: &ast.BasicLit{Value: pkgPath("bar/bar")}},
-			},
-			pkgToSplit: map[string]string{
-				pkgPath("bar/bar"): depSplitA.Name,
-			},
-			expectedImports: map[string]string{
-				"bar":     pkgPath("bar"),
-				"renamed": pkgPath("bar/bar"),
-			},
-			expectedResiduals: map[string]bool{
-				pkgPath("bar"): true,
-			},
-			expectedSplitDeps: map[string]bool{},
-		},
-		"SplitDeps": {
-			imports: []*ast.ImportSpec{
-				{Path: &ast.BasicLit{Value: pkgPath("bar")}},
-				{Name: ast.NewIdent("renamed"), Path: &ast.BasicLit{Value: pkgPath("bar/bar")}},
-			},
-			pkgToSplit: map[string]string{
-				pkgPath("bar"):     depSplitA.Name,
-				pkgPath("bar/bar"): depSplitB.Name,
-			},
-			expectedImports: map[string]string{
-				"bar":     pkgPath("bar"),
-				"renamed": pkgPath("bar/bar"),
-			},
-			expectedResiduals: map[string]bool{},
-			expectedSplitDeps: map[string]bool{
-				"b": true,
-			},
-		},
-	}
-
-	for n := range tcs {
-		tc := tcs[n]
-		t.Run(n, func(t *testing.T) {
-			t.Parallel()
-
-			fe := map[string]testcache.FakeFileCacheEntry{}
-			for _, i := range tc.imports {
-				fe[strings.TrimPrefix(filepath.Join(i.Path.Value, "file.go"), testModulePath+"/")] = testcache.FakeFileCacheEntry{}
-			}
-			fe["go.mod"] = testcache.FakeFileCacheEntry{Data: []byte("module example.com/repo")}
-
-			fc, err := testcache.NewFakeFileCache("fake-cache-dir", fe)
-			testlib.NoError(t, true, err)
-
-			az := analyser{
-				log: testlib.NewTestLogger(),
-				fc:  fc,
-				sp:  &config.Splits{DataSplits: splits.DataSplits{PkgToSplit: tc.pkgToSplit}},
-			}
-			a := &analysis{
-				split: &config.Split{DataSplit: splits.DataSplit{
-					Name:      "a",
-					Residuals: map[string]bool{},
-					SplitDeps: map[string]bool{},
-				}},
-				imports: map[string]string{},
-			}
-
-			err = az.computeSplitDepsAndResiduals(a, tc.imports)
-			testlib.NoError(t, true, err)
-			testlib.Equal(t, false, tc.expectedImports, a.imports)
-			testlib.Equal(t, false, tc.expectedResiduals, a.split.Residuals)
-			testlib.Equal(t, false, tc.expectedSplitDeps, a.split.SplitDeps)
 		})
 	}
 }

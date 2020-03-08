@@ -21,11 +21,11 @@ import (
 // The prequisites on the fields of a config.Splits object for CleaveSplits to be able to operate
 // are:
 //  - For each config.Split in Splits the Name and Files fields have been populated.
-func ComputeResiduals(l *zap.Logger, fc filecache.FileCache, sp *config.Splits) error {
+func ComputeResiduals(log *zap.Logger, fc filecache.FileCache, sp *config.Splits) error {
 	var fail bool
 	for _, s := range sp.Splits {
 		a := analyser{
-			log: l,
+			log: log,
 			fc:  fc,
 			sp:  sp,
 		}
@@ -39,20 +39,25 @@ func ComputeResiduals(l *zap.Logger, fc filecache.FileCache, sp *config.Splits) 
 		fail = true
 		msgs := map[string]bool{}
 		for i := range analysisErrs {
-			if l.Core().Enabled(zap.DebugLevel) {
+			if log.Core().Enabled(zap.DebugLevel) {
 				msgs[analysisErrs[i].Error()] = true
 			} else {
 				msgs[analysisErrs[i].Details()] = true
 			}
 		}
-		l.Error("Detected errors while computing split residuals:")
+		log.Error("Detected errors while computing split residuals:")
 		for msg := range msgs {
-			l.Error(" - " + msg)
+			log.Error(" - " + msg)
 		}
 	}
-
 	if fail {
 		return errors.New("errors detected during computation of split residuals")
+	}
+
+	for _, s := range sp.Splits {
+		if err := computeDependencies(log, fc, sp, s); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -74,8 +79,6 @@ func (az *analyser) analyseSplit(a *analysis) ([]residualError, error) {
 
 	az.log.Debug("Analysing split.", zap.String("split", a.split.Name))
 
-	a.split.Residuals = map[string]bool{}
-	a.split.SplitDeps = map[string]bool{}
 	for f := range a.split.Files {
 		if filepath.Ext(f) != ".go" {
 			az.log.Debug("Skipping analysis of non-Go file.", zap.String("file", f))
@@ -90,12 +93,13 @@ func (az *analyser) analyseSplit(a *analysis) ([]residualError, error) {
 
 		a.fs = fs
 		a.imports = map[string]string{}
-		if err = az.computeSplitDepsAndResiduals(a, fa.Imports); err != nil {
-			return nil, err
-		}
-
-		if err = az.computeIndirectDependencies(a.split); err != nil {
-			return nil, err
+		for _, imp := range fa.Imports {
+			p := strings.Trim(imp.Path.Value, `"`)
+			n := filepath.Base(p)
+			if imp.Name != nil {
+				n = imp.Name.Name
+			}
+			a.imports[n] = p
 		}
 
 		if filepath.Base(f) != "test.go" && !strings.HasSuffix(f, "_test.go") {
@@ -103,35 +107,6 @@ func (az *analyser) analyseSplit(a *analysis) ([]residualError, error) {
 		}
 	}
 	return analysisErrs, nil
-}
-
-func (az *analyser) computeSplitDepsAndResiduals(a *analysis, imports []*ast.ImportSpec) error {
-	for _, imp := range imports {
-		p := strings.Trim(imp.Path.Value, `"`)
-		n := filepath.Base(p)
-		if imp.Name != nil {
-			n = imp.Name.Name
-		}
-		a.imports[n] = p
-
-		if !az.fc.Pkgs()[p] {
-			continue
-		}
-
-		if ts := az.sp.PkgToSplit[p]; ts != "" && ts != a.split.Name {
-			az.log.Debug(
-				"Inter-split dependency detected.",
-				zap.String("import", imp.Path.Value),
-				zap.String("source", a.split.Name),
-				zap.String("target", ts),
-			)
-			a.split.SplitDeps[ts] = true
-		} else if ts == "" {
-			az.log.Debug("Residual detected.", zap.String("split", a.split.Name), zap.String("residual", imp.Path.Value))
-			a.split.Residuals[p] = true
-		}
-	}
-	return nil
 }
 
 func (az *analyser) analyseFile(a *analysis, f *ast.File) (errs []residualError) {
@@ -287,64 +262,4 @@ func (az *analyser) analyseType(a *analysis, e ast.Expr) (errs []residualError) 
 		// No further analysis is required at this point.
 	}
 	return errs
-}
-
-func (az *analyser) computeIndirectDependencies(s *config.Split) error {
-	s.ResidualFiles = map[string]bool{}
-
-	var todo []string
-	for pkg := range s.Residuals {
-		fs, err := az.fc.FilesInPkg(pkg)
-		if err != nil {
-			return err
-		}
-		for f := range fs {
-			s.ResidualFiles[f] = true
-			if filepath.Ext(f) == ".go" {
-				todo = append(todo, f)
-			}
-		}
-	}
-
-	for len(todo) > 0 {
-		f := todo[0]
-		todo = todo[1:]
-		az.log.Debug("Parsing residual file for indirect dependencies.", zap.String("file", f))
-
-		fa, _, err := az.fc.ReadGoFile(f)
-		if err != nil {
-			return err
-		}
-
-		for _, imp := range fa.Imports {
-			p := strings.Trim(imp.Path.Value, "\"")
-			if s.Residuals[p] {
-				continue
-			} else if !az.fc.Pkgs()[p] {
-				continue
-			}
-
-			if ts := az.sp.PkgToSplit[p]; ts == s.Name {
-				continue
-			} else if ts != "" {
-				az.log.Debug("Inter-split dependency detected.", zap.String("import", p), zap.String("source", s.Name), zap.String("target", ts))
-				s.SplitDeps[ts] = true
-				continue
-			}
-
-			az.log.Debug("Residual detected.", zap.String("split", s.Name), zap.String("residual", p))
-			s.Residuals[p] = true
-
-			pkgFiles, err := az.fc.FilesInPkg(p)
-			if err != nil {
-				return err
-			}
-			for f := range pkgFiles {
-				if filepath.Ext(f) == ".go" {
-					todo = append(todo, f)
-				}
-			}
-		}
-	}
-	return nil
 }
