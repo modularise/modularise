@@ -149,24 +149,30 @@ var MyVar pkg.ExportedType
 		t.Run(n, func(t *testing.T) {
 			t.Parallel()
 
+			fc, err := testcache.NewFakeFileCache("", map[string]testcache.FakeFileCacheEntry{
+				"go.mod": testcache.FakeFileCacheEntry{Data: []byte("module example.com/pkg")},
+				"lib.go": testcache.FakeFileCacheEntry{Data: []byte("package pkg\n")},
+			})
+			testlib.NoError(t, true, err)
+
 			pkgToSplit := tc.pkgTosplit
 			if pkgToSplit == nil {
 				pkgToSplit = map[string]string{}
 			}
-			a := &analyser{
-				log:     testlib.NewTestLogger(),
+			az := &analyser{
+				log: testlib.NewTestLogger(),
+				fc:  fc,
+				sp:  &config.Splits{DataSplits: splits.DataSplits{PkgToSplit: pkgToSplit}},
+			}
+			a := &analysis{
+				split:   &config.Split{DataSplit: splits.DataSplit{Name: testSplit}},
 				fs:      token.NewFileSet(),
 				imports: map[string]string{"pkg": testPkg},
-				pkgs:    map[string]bool{testPkg: true},
-				s:       &config.Split{DataSplit: splits.DataSplit{Name: testSplit}},
-				sp:      &config.Splits{DataSplits: splits.DataSplits{PkgToSplit: pkgToSplit}},
 			}
 			f, err := parser.ParseFile(a.fs, "", tc.in, parser.AllErrors|parser.ParseComments)
 			testlib.NoError(t, true, err)
 
-			a.analyseFile(f)
-
-			testlib.Equal(t, false, tc.errs, a.errs)
+			testlib.Equal(t, false, tc.errs, az.analyseFile(a, f))
 		})
 	}
 }
@@ -235,24 +241,30 @@ func TestType(t *testing.T) {
 		t.Run(n, func(t *testing.T) {
 			t.Parallel()
 
+			fc, err := testcache.NewFakeFileCache("", map[string]testcache.FakeFileCacheEntry{
+				"go.mod": testcache.FakeFileCacheEntry{Data: []byte("module example.com/pkg")},
+				"lib.go": testcache.FakeFileCacheEntry{Data: []byte("package pkg\n")},
+			})
+			testlib.NoError(t, true, err)
+
 			pkgToSplit := tc.pkgTosplit
 			if pkgToSplit == nil {
 				pkgToSplit = map[string]string{}
 			}
-			a := &analyser{
-				log:     testlib.NewTestLogger(),
+			az := &analyser{
+				log: testlib.NewTestLogger(),
+				fc:  fc,
+				sp:  &config.Splits{DataSplits: splits.DataSplits{PkgToSplit: pkgToSplit}},
+			}
+			a := &analysis{
+				split:   &config.Split{DataSplit: splits.DataSplit{Name: "test-split"}},
 				fs:      token.NewFileSet(),
 				imports: map[string]string{"pkg": testPkg},
-				pkgs:    map[string]bool{testPkg: true},
-				s:       &config.Split{DataSplit: splits.DataSplit{Name: "test-split"}},
-				sp:      &config.Splits{DataSplits: splits.DataSplits{PkgToSplit: pkgToSplit}},
 			}
 			e, err := parser.ParseExprFrom(a.fs, "", tc.in, parser.AllErrors|parser.ParseComments)
 			testlib.NoError(t, true, err)
 
-			a.analyseCompositeType(e)
-
-			testlib.Equal(t, false, tc.errs, a.errs)
+			testlib.Equal(t, false, tc.errs, az.analyseCompositeType(a, e))
 		})
 	}
 }
@@ -359,22 +371,25 @@ func TestResolveImportsAndResiduals(t *testing.T) {
 			fc, err := testcache.NewFakeFileCache("fake-cache-dir", fe)
 			testlib.NoError(t, true, err)
 
-			a := analyser{
-				log:     testlib.NewTestLogger(),
-				fc:      fc,
-				imports: map[string]string{},
-				s: &config.Split{DataSplit: splits.DataSplit{
+			az := analyser{
+				log: testlib.NewTestLogger(),
+				fc:  fc,
+				sp:  &config.Splits{DataSplits: splits.DataSplits{PkgToSplit: tc.pkgToSplit}},
+			}
+			a := &analysis{
+				split: &config.Split{DataSplit: splits.DataSplit{
 					Name:      "a",
 					Residuals: map[string]bool{},
 					SplitDeps: map[string]bool{},
 				}},
-				sp: &config.Splits{DataSplits: splits.DataSplits{PkgToSplit: tc.pkgToSplit}},
+				imports: map[string]string{},
 			}
-			err = a.computeSplitDepsAndResiduals(tc.imports)
+
+			err = az.computeSplitDepsAndResiduals(a, tc.imports)
 			testlib.NoError(t, true, err)
 			testlib.Equal(t, false, tc.expectedImports, a.imports)
-			testlib.Equal(t, false, tc.expectedResiduals, a.s.Residuals)
-			testlib.Equal(t, false, tc.expectedSplitDeps, a.s.SplitDeps)
+			testlib.Equal(t, false, tc.expectedResiduals, a.split.Residuals)
+			testlib.Equal(t, false, tc.expectedSplitDeps, a.split.SplitDeps)
 		})
 	}
 }
