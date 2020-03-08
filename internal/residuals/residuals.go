@@ -22,11 +22,6 @@ import (
 // are:
 //  - For each config.Split in Splits the Name and Files fields have been populated.
 func ComputeResiduals(l *zap.Logger, fc filecache.FileCache, s *config.Splits) error {
-	pkgs, err := fc.Pkgs()
-	if err != nil {
-		return err
-	}
-
 	var fail bool
 	for _, v := range s.Splits {
 		a := analyser{
@@ -34,7 +29,7 @@ func ComputeResiduals(l *zap.Logger, fc filecache.FileCache, s *config.Splits) e
 			fc:   fc,
 			s:    v,
 			sp:   s,
-			pkgs: pkgs,
+			pkgs: fc.Pkgs(),
 		}
 		if err := a.analyseSplit(); err != nil {
 			return err
@@ -111,11 +106,6 @@ func (a *analyser) analyseSplit() error {
 }
 
 func (a *analyser) computeSplitDepsAndResiduals(imports []*ast.ImportSpec) error {
-	pkgs, err := a.fc.Pkgs()
-	if err != nil {
-		return err
-	}
-
 	for _, imp := range imports {
 		p := strings.Trim(imp.Path.Value, `"`)
 		n := filepath.Base(p)
@@ -124,7 +114,7 @@ func (a *analyser) computeSplitDepsAndResiduals(imports []*ast.ImportSpec) error
 		}
 		a.imports[n] = p
 
-		if !pkgs[p] {
+		if !a.fc.Pkgs()[p] {
 			continue
 		}
 

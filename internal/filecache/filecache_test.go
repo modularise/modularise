@@ -53,9 +53,7 @@ func TestPkgs(t *testing.T) {
 	parallelTestAllCacheTypes(t, a, func(t *testing.T, fc FileCache) {
 		t.Parallel()
 
-		pkgs, err := fc.Pkgs()
-		testlib.NoError(t, true, err)
-		testlib.Equal(t, false, eps, pkgs)
+		testlib.Equal(t, false, eps, fc.Pkgs())
 	})
 }
 
@@ -78,9 +76,7 @@ func TestFiles(t *testing.T) {
 	parallelTestAllCacheTypes(t, a, func(t *testing.T, fc FileCache) {
 		t.Parallel()
 
-		fs, err := fc.Files()
-		testlib.NoError(t, true, err)
-		testlib.Equal(t, false, efs, fs)
+		testlib.Equal(t, false, efs, fc.Files())
 	})
 }
 

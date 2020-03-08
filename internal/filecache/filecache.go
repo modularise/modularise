@@ -33,10 +33,10 @@ type FileCache interface {
 	// Module path for the Go module abstracted by this filecache.
 	ModulePath() string
 	// Set of all the Go packages contained within the module abstracted by this filecache.
-	Pkgs() (map[string]bool, error)
+	Pkgs() map[string]bool
 	// Set of all Go and non-Go files contained within the module abstracted by this filecache. The
 	// retured paths are all relative to the module's root.
-	Files() (map[string]bool, error)
+	Files() map[string]bool
 	// Set of all Go and non-Go files contained within the specified Go package. The package must be
 	// part of the module abstracted by this filecache. The returned paths are all relative to the
 	// module's root.

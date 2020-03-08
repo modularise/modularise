@@ -207,18 +207,13 @@ func (c cleaver) copyMetafiles() error {
 		"LICENCE.md",
 	}
 
-	fs, err := c.fc.Files()
-	if err != nil {
-		return err
-	}
-
 	for _, fn := range metaFiles {
-		if !fs[fn] {
+		if !c.fc.Files()[fn] {
 			continue
 		}
 
 		var b []byte
-		b, err = c.fc.ReadFile(fn)
+		b, err := c.fc.ReadFile(fn)
 		if err != nil {
 			return err
 		}
@@ -231,7 +226,7 @@ func (c cleaver) copyMetafiles() error {
 
 	rmc := fmt.Sprintf(splitReadmeTemplate, c.fc.ModulePath())
 	p := filepath.Join(c.s.WorkDir, "README.md")
-	if err = ioutil.WriteFile(p, []byte(rmc), 0644); err != nil {
+	if err := ioutil.WriteFile(p, []byte(rmc), 0644); err != nil {
 		c.log.Error("Failed to write the default README.md file.", zap.String("path", p), zap.Error(err))
 		return err
 	}

@@ -56,25 +56,24 @@ func (c FakeFileCache) ModulePath() string {
 	return c.path
 }
 
-func (c FakeFileCache) Pkgs() (map[string]bool, error) {
+func (c FakeFileCache) Pkgs() map[string]bool {
 	pkgs := map[string]bool{}
 	for relPkg := range relativePkgs(c.fileEntries) {
 		pkgs[filepath.Join(c.path, relPkg)] = true
 	}
-	return pkgs, nil
+	return pkgs
 }
 
-func (c FakeFileCache) Files() (map[string]bool, error) {
+func (c FakeFileCache) Files() map[string]bool {
 	fs := map[string]bool{}
 	for p := range c.fileEntries {
 		fs[p] = true
 	}
-	return fs, nil
+	return fs
 }
 
 func (c FakeFileCache) FilesInPkg(pkg string) (map[string]bool, error) {
-	pkgs, _ := c.Pkgs()
-	if !pkgs[pkg] {
+	if !c.Pkgs()[pkg] {
 		return nil, fmt.Errorf("package %q is not part of module %q", pkg, c.path)
 	}
 	fs := map[string]bool{}

@@ -69,12 +69,17 @@ func NewCache(log *zap.Logger, root string) (*Cache, error) {
 		return nil, errors.New("go list error")
 	}
 
-	return &Cache{
+	c := &Cache{
 		log:      log,
 		root:     mi.Dir,
 		path:     mi.Path,
 		fileData: map[string][]byte{},
-	}, nil
+	}
+
+	if err := c.populateFilesAndPkgs(); err != nil {
+		return nil, err
+	}
+	return c, nil
 }
 
 type Cache struct {
@@ -94,27 +99,15 @@ func (c Cache) ModulePath() string {
 	return c.path
 }
 
-func (c *Cache) Pkgs() (map[string]bool, error) {
-	if err := c.populateFilesAndPkgs(); err != nil {
-		c.log.Error("Failed to initialise file and package data for uncache.", zap.Error(err))
-		return nil, err
-	}
-	return c.pkgs, nil
+func (c *Cache) Pkgs() map[string]bool {
+	return c.pkgs
 }
 
-func (c *Cache) Files() (map[string]bool, error) {
-	if err := c.populateFilesAndPkgs(); err != nil {
-		c.log.Error("Failed to initialise file and package data for uncache.", zap.Error(err))
-		return nil, err
-	}
-	return c.files, nil
+func (c *Cache) Files() map[string]bool {
+	return c.files
 }
 
 func (c *Cache) FilesInPkg(pkg string) (map[string]bool, error) {
-	if err := c.populateFilesAndPkgs(); err != nil {
-		c.log.Error("Failed to initialise file and package data for uncache.", zap.Error(err))
-		return nil, err
-	}
 	if !c.pkgs[pkg] {
 		c.log.Error("Supplied package is not part of module abstracted by this filecache.", zap.String("package", pkg), zap.String("module", c.path))
 		return nil, fmt.Errorf("package %q is not part of module %q", pkg, c.path)
@@ -129,11 +122,6 @@ func (c *Cache) FilesInPkg(pkg string) (map[string]bool, error) {
 }
 
 func (c *Cache) ReadFile(path string) ([]byte, error) {
-	if err := c.populateFilesAndPkgs(); err != nil {
-		c.log.Error("Failed to initialise file and package data for uncache.", zap.Error(err))
-		return nil, err
-	}
-
 	path = filepath.Clean(path)
 	if !c.files[path] {
 		c.log.Error("File does not exist or is not part of module.", zap.String("file", path), zap.String("module", c.path))
@@ -153,11 +141,6 @@ func (c *Cache) ReadFile(path string) ([]byte, error) {
 }
 
 func (c *Cache) ReadGoFile(path string) (*ast.File, *token.FileSet, error) {
-	if err := c.populateFilesAndPkgs(); err != nil {
-		c.log.Error("Failed to initialise file and package data for uncache.", zap.Error(err))
-		return nil, nil, err
-	}
-
 	path = filepath.Clean(path)
 	if !c.files[path] {
 		c.log.Error("File does not exist or is not part of module.", zap.String("file", path), zap.String("module", c.path))

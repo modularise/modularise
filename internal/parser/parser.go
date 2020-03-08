@@ -32,11 +32,7 @@ func Parse(l *zap.Logger, fc filecache.FileCache, sp *config.Splits) error {
 }
 
 func parseFiles(l *zap.Logger, fc filecache.FileCache, sp *config.Splits) error {
-	files, err := fc.Files()
-	if err != nil {
-		return err
-	}
-	sp.NonModuleSource = !files["go.mod"]
+	sp.NonModuleSource = !fc.Files()["go.mod"]
 
 	var mapping prefixMappings
 	for n, s := range sp.Splits {
@@ -56,7 +52,7 @@ func parseFiles(l *zap.Logger, fc filecache.FileCache, sp *config.Splits) error 
 	}
 	sort.Sort(mapping)
 
-	for f := range files {
+	for f := range fc.Files() {
 		if s := mapping.matchedSplit(filepath.Dir(f)); s != "" {
 			sp.Splits[s].Files[f] = true
 		}
