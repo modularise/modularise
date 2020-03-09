@@ -107,11 +107,6 @@ func initSplitDir(log *zap.Logger, s *config.Split) error {
 
 func cloneRepository(log *zap.Logger, s *config.Split, sp *config.Splits) error {
 	if s.URL == "" {
-		log.Info(
-			"No remote configured for split. It won't be synced to a Git repository but its content will be stored locally.",
-			zap.String("split", s.Name),
-			zap.String("directory", s.WorkDir),
-		)
 		return initRepository(log, s, sp)
 	}
 

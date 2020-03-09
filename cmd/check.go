@@ -1,8 +1,21 @@
 package cmd
 
-import "github.com/modularise/modularise/cmd/config"
+import (
+	"github.com/modularise/modularise/cmd/config"
+	"github.com/modularise/modularise/internal/parser"
+	"github.com/modularise/modularise/internal/residuals"
+)
 
 func RunCheck(c *config.CLIConfig) error {
-	c.Logger.Fatal("The 'check' command is not yet functional.")
+	c.Logger.Info("Parsing split configuration.")
+	if err := parser.Parse(c.Logger, c.Filecache, &c.Splits); err != nil {
+		return err
+	}
+
+	c.Logger.Info("Checking self-contained character of split APIs and computing residual packages.")
+	if err := residuals.ComputeResiduals(c.Logger, c.Filecache, &c.Splits); err != nil {
+		return err
+	}
+	c.Logger.Info("The split configuration in " + c.ConfigFile + " is valid.")
 	return nil
 }
