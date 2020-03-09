@@ -16,6 +16,7 @@ import (
 
 	"github.com/modularise/modularise/internal/filecache"
 	"github.com/modularise/modularise/internal/filecache/cache"
+	"github.com/modularise/modularise/internal/logger"
 )
 
 type CLIConfig struct {
@@ -76,10 +77,10 @@ func (c *CLIConfig) checkLogger() error {
 	var enc zapcore.Encoder
 	var level zapcore.LevelEnabler
 	if c.Verbose {
-		enc = zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
+		enc = logger.NewModulariseEncoder()
 		level = zapcore.DebugLevel
 	} else {
-		enc = zapcore.NewConsoleEncoder(zap.NewProductionEncoderConfig())
+		enc = logger.NewModulariseEncoder()
 		level = zapcore.InfoLevel
 	}
 

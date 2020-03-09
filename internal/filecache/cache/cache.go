@@ -162,7 +162,7 @@ func (c *Cache) ReadGoFile(path string) (*ast.File, *token.FileSet, error) {
 	}
 
 	fset := token.NewFileSet()
-	a, err := parser.ParseFile(fset, "", b, parser.AllErrors|parser.ParseComments)
+	a, err := parser.ParseFile(fset, path, b, parser.AllErrors|parser.ParseComments)
 	return a, fset, err
 }
 

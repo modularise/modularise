@@ -14,6 +14,13 @@ func attachGlobalFlags(command *cobra.Command, c *config.CLIConfig) {
 		"",
 		"Location of the configuration file to use.",
 	)
+	command.PersistentFlags().StringVarP(
+		&c.LogFile,
+		"log-file",
+		"l",
+		"",
+		"File to which to write logs instead of the console.",
+	)
 	command.PersistentFlags().BoolVarP(
 		&c.Verbose,
 		"verbose",

@@ -10,10 +10,16 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/modularise/modularise/internal/logger"
 )
 
 func NewTestLogger() *zap.Logger {
-	return zap.New(zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), os.Stderr, zap.DebugLevel))
+	return zap.New(
+		zapcore.NewCore(logger.NewModulariseEncoder(), os.Stderr, zap.DebugLevel),
+		zap.AddCaller(),
+		zap.Development(),
+	)
 }
 
 func Equal(t *testing.T, strict bool, expected interface{}, actual interface{}) {
