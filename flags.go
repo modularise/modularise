@@ -14,6 +14,12 @@ func attachGlobalFlags(command *cobra.Command, c *config.CLIConfig) {
 		"",
 		"Location of the configuration file to use.",
 	)
+	command.PersistentFlags().BoolVar(
+		&c.JSON,
+		"json",
+		false,
+		"Log output in JSON format.",
+	)
 	command.PersistentFlags().StringVarP(
 		&c.LogFile,
 		"log-file",

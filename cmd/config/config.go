@@ -23,6 +23,8 @@ type CLIConfig struct {
 	// Path to the configuration file to use. If empty this will default to a 'modularise.yaml'
 	// file located at the root of the Go module from which the command is invoked.
 	ConfigFile string
+	// Produce log output in a valid JSON format.
+	JSON bool
 	// File to which to write execution logs. If empty logs will be written to the standard output
 	// of the command invocation.
 	LogFile string
@@ -75,18 +77,22 @@ func (c *CLIConfig) checkLogger() error {
 	}
 
 	var enc zapcore.Encoder
-	var level zapcore.LevelEnabler
-	if c.Verbose {
-		enc = logger.NewModulariseEncoder()
-		level = zapcore.DebugLevel
+	if c.JSON {
+		enc = zapcore.NewJSONEncoder(zap.NewDevelopmentEncoderConfig())
 	} else {
 		enc = logger.NewModulariseEncoder()
+	}
+
+	var level zapcore.LevelEnabler
+	if c.Verbose {
+		level = zapcore.DebugLevel
+	} else {
 		level = zapcore.InfoLevel
 	}
 
 	var out zapcore.WriteSyncer
 	if c.LogFile != "" {
-		f, err := os.OpenFile(c.LogFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY|os.O_EXCL, 0644)
+		f, err := os.OpenFile(c.LogFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 		if err != nil {
 			return err
 		}
