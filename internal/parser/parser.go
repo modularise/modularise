@@ -1,11 +1,14 @@
 package parser
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/modularise/modularise/cmd/config"
 	"github.com/modularise/modularise/internal/filecache"
@@ -40,7 +43,7 @@ func parseFiles(l *zap.Logger, fc filecache.FileCache, sp *config.Splits) error 
 
 		for j := range s.Includes {
 			mapping = append(mapping, prefixMapping{
-				prefix: filepath.Clean(s.Includes[j]),
+				prefix: filepath.Clean(s.Includes[j]) + string(os.PathSeparator),
 				split:  n,
 			})
 		}
@@ -52,13 +55,28 @@ func parseFiles(l *zap.Logger, fc filecache.FileCache, sp *config.Splits) error 
 	}
 	sort.Sort(mapping)
 
+	var nonMatched []string
 	for f := range fc.Files() {
-		if s := mapping.matchedSplit(filepath.Dir(f)); s != "" {
+		if s := mapping.matchedSplit(filepath.Dir(f) + string(os.PathSeparator)); s != "" {
 			sp.Splits[s].Files[f] = true
+		} else {
+			nonMatched = append(nonMatched, f)
 		}
 	}
-	for _, s := range sp.Splits {
-		l.Debug("Computed files of split.", zap.String("split", s.Name), zap.Any("files", s.Files))
+
+	// This computation and logging sequence might be expensive for large projects hence we guard
+	// this with an explicit logger-level check.
+	if l.Core().Enabled(zapcore.DebugLevel) {
+		var matchDebug []string
+		for _, m := range mapping {
+			matchDebug = append(matchDebug, fmt.Sprintf("%s => %s", m.prefix, m.split))
+		}
+		l.Debug("Split path matches.", zap.Strings("mapping", matchDebug))
+		sort.Strings(nonMatched)
+		l.Debug("Non-matched files.", zap.Strings("files", nonMatched))
+		for _, s := range sp.Splits {
+			l.Debug("Computed files of split.", zap.String("split", s.Name), zap.Any("files", s.Files))
+		}
 	}
 	return nil
 }

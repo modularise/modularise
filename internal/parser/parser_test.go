@@ -38,6 +38,18 @@ func TestUnit_ParseUnit(t *testing.T) {
 				"one": {"one/one.go": true},
 			},
 		},
+		"OneSplitOneFileNested": {
+			files: map[string]testcache.FakeFileCacheEntry{
+				"go.mod":            goMod,
+				"one/nested/one.go": {},
+			},
+			splits: config.Splits{Splits: map[string]*config.Split{
+				"one": {Includes: []string{"one"}},
+			}},
+			expected: map[string]map[string]bool{
+				"one": {"one/nested/one.go": true},
+			},
+		},
 		"OneSplitOneIdenticallyNamedFile": {
 			files: map[string]testcache.FakeFileCacheEntry{
 				"go.mod": goMod,
@@ -102,6 +114,22 @@ func TestUnit_ParseUnit(t *testing.T) {
 					"one/two/one/one.go": true,
 				},
 				"two": {"one/two/two.go": true},
+			},
+		},
+		"TwoSplitsWithOverlappingPaths": {
+			files: map[string]testcache.FakeFileCacheEntry{
+				"go.mod": goMod,
+				// The files need to be nested as the matcher removes the last part of the to-be-matched path.
+				"one/lib/one.go":    {},
+				"onetwo/lib/two.go": {},
+			},
+			splits: config.Splits{Splits: map[string]*config.Split{
+				"one": {Includes: []string{"one"}},
+				"two": {Includes: []string{"onetwo"}},
+			}},
+			expected: map[string]map[string]bool{
+				"one": {"one/lib/one.go": true},
+				"two": {"onetwo/lib/two.go": true},
 			},
 		},
 	}
