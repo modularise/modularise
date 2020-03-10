@@ -2,6 +2,7 @@ package filecache
 
 import (
 	"go/ast"
+	"go/parser"
 	"go/token"
 
 	"github.com/modularise/modularise/internal/filecache/cache"
@@ -49,5 +50,5 @@ type FileCache interface {
 	// filecache. The path argument is interpreted as relative to the root of the module. The
 	// returned ast.File object may be modified and tweaked without it affecting the result of any
 	// subsequent calls to ReadGoFile for the same path.
-	ReadGoFile(path string) (*ast.File, *token.FileSet, error)
+	ReadGoFile(path string, loadFlags parser.Mode) (*ast.File, *token.FileSet, error)
 }

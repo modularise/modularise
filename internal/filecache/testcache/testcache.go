@@ -97,7 +97,7 @@ func (c FakeFileCache) ReadFile(path string) ([]byte, error) {
 	return cd, nil
 }
 
-func (c *FakeFileCache) ReadGoFile(path string) (*ast.File, *token.FileSet, error) {
+func (c *FakeFileCache) ReadGoFile(path string, loadFlags parser.Mode) (*ast.File, *token.FileSet, error) {
 	path = filepath.Clean(path)
 
 	f, ok := c.fileEntries[path]
@@ -106,8 +106,9 @@ func (c *FakeFileCache) ReadGoFile(path string) (*ast.File, *token.FileSet, erro
 	} else if filepath.Ext(path) != ".go" {
 		return nil, nil, fmt.Errorf("%s is not a go file", path)
 	}
+
 	fs := token.NewFileSet()
-	a, err := parser.ParseFile(fs, "", f.Data, parser.AllErrors|parser.ParseComments)
+	a, err := parser.ParseFile(fs, "", f.Data, loadFlags)
 	if err != nil {
 		return nil, nil, err
 	}

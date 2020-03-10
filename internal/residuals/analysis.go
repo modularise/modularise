@@ -3,6 +3,7 @@ package residuals
 import (
 	"errors"
 	"go/ast"
+	"go/parser"
 	"go/printer"
 	"go/token"
 	"path/filepath"
@@ -86,7 +87,7 @@ func (az *analyser) analyseSplit(a *analysis) ([]residualError, error) {
 		}
 		az.log.Debug("Analysing file for residuals.", zap.String("file", f))
 
-		fa, fs, err := az.fc.ReadGoFile(f)
+		fa, fs, err := az.fc.ReadGoFile(f, parser.AllErrors)
 		if err != nil {
 			return nil, err
 		}

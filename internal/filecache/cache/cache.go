@@ -144,7 +144,7 @@ func (c *Cache) ReadFile(path string) ([]byte, error) {
 	return c.fileData[path], nil
 }
 
-func (c *Cache) ReadGoFile(path string) (*ast.File, *token.FileSet, error) {
+func (c *Cache) ReadGoFile(path string, loadFlags parser.Mode) (*ast.File, *token.FileSet, error) {
 	path = filepath.Clean(path)
 	if !c.files[path] {
 		c.log.Error("File does not exist or is not part of module.", zap.String("file", path), zap.String("module", c.path))
@@ -162,7 +162,7 @@ func (c *Cache) ReadGoFile(path string) (*ast.File, *token.FileSet, error) {
 	}
 
 	fset := token.NewFileSet()
-	a, err := parser.ParseFile(fset, path, b, parser.AllErrors|parser.ParseComments)
+	a, err := parser.ParseFile(fset, path, b, loadFlags)
 	return a, fset, err
 }
 

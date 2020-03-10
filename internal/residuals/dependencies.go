@@ -1,6 +1,7 @@
 package residuals
 
 import (
+	"go/parser"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -98,7 +99,7 @@ func (r *resolver) analyse() {
 
 		r.log.Debug("Parsing residual file for indirect dependencies.", zap.String("file", f))
 
-		fa, _, err := r.fc.ReadGoFile(f)
+		fa, _, err := r.fc.ReadGoFile(f, parser.ImportsOnly)
 		if err != nil {
 			r.err = err
 			return

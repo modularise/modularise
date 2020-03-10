@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"go/ast"
+	"go/parser"
 	"go/printer"
 	"io/ioutil"
 	"os"
@@ -136,7 +137,7 @@ func (c cleaver) copyFileToWorkDir(source string, residual bool) error {
 
 	var content []byte
 	if filepath.Ext(source) == ".go" {
-		a, fs, err := c.fc.ReadGoFile(source)
+		a, fs, err := c.fc.ReadGoFile(source, parser.AllErrors|parser.ParseComments)
 		if err != nil {
 			return err
 		}

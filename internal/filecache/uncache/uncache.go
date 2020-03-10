@@ -128,7 +128,7 @@ func (c *Uncache) ReadFile(path string) ([]byte, error) {
 	return ioutil.ReadFile(filepath.Join(c.root, path))
 }
 
-func (c *Uncache) ReadGoFile(path string) (*ast.File, *token.FileSet, error) {
+func (c *Uncache) ReadGoFile(path string, loadFlags parser.Mode) (*ast.File, *token.FileSet, error) {
 	path = filepath.Clean(path)
 	if !c.files[path] {
 		c.log.Error("File does not exist or is not part of module.", zap.String("file", path), zap.String("module", c.path))
@@ -141,7 +141,7 @@ func (c *Uncache) ReadGoFile(path string) (*ast.File, *token.FileSet, error) {
 	}
 
 	fset := token.NewFileSet()
-	a, err := parser.ParseFile(fset, filepath.Join(c.root, path), nil, parser.AllErrors|parser.ParseComments)
+	a, err := parser.ParseFile(fset, filepath.Join(c.root, path), nil, loadFlags)
 	return a, fset, err
 }
 

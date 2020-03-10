@@ -2,6 +2,7 @@ package filecache
 
 import (
 	"encoding/json"
+	"go/parser"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -160,7 +161,7 @@ func TestReadGoFile(t *testing.T) {
 
 		var astInvarianceTested bool
 		for tf := range tfs {
-			fa, fs, err := fc.ReadGoFile(tf)
+			fa, fs, err := fc.ReadGoFile(tf, parser.AllErrors|parser.ParseComments)
 			// We deliberately do not try to compare the resulting AST or FileSet as we've already
 			// assert in TestReadFile above that the content we get for the file is correct. Hence
 			// we only need to ensure that we do not error out and return actual non-nil objects.
@@ -171,13 +172,13 @@ func TestReadGoFile(t *testing.T) {
 
 			if len(fa.Imports) > 0 {
 				astInvarianceTested = true
-				fa2, _, err := fc.ReadGoFile(tf)
+				fa2, _, err := fc.ReadGoFile(tf, parser.AllErrors|parser.ParseComments)
 				testlib.NoError(t, true, err)
 				for _, imp := range fa2.Imports {
 					imp.Path.Value = "invalid-import"
 				}
 
-				fa3, _, err := fc.ReadGoFile(tf)
+				fa3, _, err := fc.ReadGoFile(tf, parser.AllErrors|parser.ParseComments)
 				testlib.NoError(t, true, err)
 				testlib.Equal(t, false, fa3, fa)
 			}
@@ -227,7 +228,7 @@ func BenchmarkReadGoFile(b *testing.B) {
 	parallelBenchmarkAllCacheTypes(b, a, func(b *testing.B, fc FileCache) {
 		for tf := range tfs {
 			for i := 0; i < b.N; i++ {
-				_, _, err := fc.ReadGoFile(tf)
+				_, _, err := fc.ReadGoFile(tf, parser.AllErrors|parser.ParseComments)
 				if err != nil {
 					b.FailNow()
 				}
