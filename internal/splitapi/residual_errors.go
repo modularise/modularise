@@ -1,4 +1,4 @@
-package residuals
+package splitapi
 
 import "fmt"
 

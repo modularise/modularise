@@ -7,6 +7,7 @@ import (
 	"github.com/modularise/modularise/internal/parser"
 	"github.com/modularise/modularise/internal/repohandler"
 	"github.com/modularise/modularise/internal/residuals"
+	"github.com/modularise/modularise/internal/splitapi"
 )
 
 func RunSplit(c *config.CLIConfig) error {
@@ -15,7 +16,12 @@ func RunSplit(c *config.CLIConfig) error {
 		return err
 	}
 
-	c.Logger.Info("Checking self-contained character of split APIs and computing residual packages.")
+	c.Logger.Info("Checking self-contained character of split APIs.")
+	if err := splitapi.AnalyseAPI(c.Logger, c.Filecache, &c.Splits); err != nil {
+		return err
+	}
+
+	c.Logger.Info("Computing residual packages.")
 	if err := residuals.ComputeResiduals(c.Logger, c.Filecache, &c.Splits); err != nil {
 		return err
 	}

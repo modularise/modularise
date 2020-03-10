@@ -13,7 +13,16 @@ import (
 	"github.com/modularise/modularise/internal/filecache"
 )
 
-func computeDependencies(log *zap.Logger, fc filecache.FileCache, sp *config.Splits, s *config.Split) error {
+func ComputeResiduals(log *zap.Logger, fc filecache.FileCache, sp *config.Splits) error {
+	for _, s := range sp.Splits {
+		if err := computeSplitResiduals(log, fc, sp, s); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func computeSplitResiduals(log *zap.Logger, fc filecache.FileCache, sp *config.Splits, s *config.Split) error {
 	log.Debug("Resolving split dependencies and residuals.", zap.String("split", s.Name))
 
 	r := &resolver{

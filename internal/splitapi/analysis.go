@@ -1,4 +1,4 @@
-package residuals
+package splitapi
 
 import (
 	"errors"
@@ -15,22 +15,23 @@ import (
 	"github.com/modularise/modularise/internal/filecache"
 )
 
-// ComputeResiduals iterates over the configured splits and performs the residuals analysis for each
-// one of them. For the details of the residual analysis please consult the
+// AnalyseAPI iterates over the configured splits and performs the residuals analysis for each one
+// of them. For the details of the residual analysis please consult the
 // ./docs/design/technical_breakdown.md document residing with the source code.
 //
 // The prequisites on the fields of a config.Splits object for CleaveSplits to be able to operate
 // are:
 //  - For each config.Split in Splits the Name and Files fields have been populated.
-func ComputeResiduals(log *zap.Logger, fc filecache.FileCache, sp *config.Splits) error {
+func AnalyseAPI(log *zap.Logger, fc filecache.FileCache, sp *config.Splits) error {
+	a := analyser{
+		log: log,
+		fc:  fc,
+		sp:  sp,
+	}
+
 	var fail bool
 	for _, s := range sp.Splits {
-		a := analyser{
-			log: log,
-			fc:  fc,
-			sp:  sp,
-		}
-		analysisErrs, err := a.analyseSplit(&analysis{split: s})
+		analysisErrs, err := a.analyseSplitAPI(&analysis{split: s})
 		if err != nil {
 			return err
 		} else if len(analysisErrs) == 0 {
@@ -41,9 +42,9 @@ func ComputeResiduals(log *zap.Logger, fc filecache.FileCache, sp *config.Splits
 		msgs := map[string]bool{}
 		for i := range analysisErrs {
 			if log.Core().Enabled(zap.DebugLevel) {
-				msgs[analysisErrs[i].Error()] = true
-			} else {
 				msgs[analysisErrs[i].Details()] = true
+			} else {
+				msgs[analysisErrs[i].Error()] = true
 			}
 		}
 		log.Error("Detected errors while computing split residuals:")
@@ -53,12 +54,6 @@ func ComputeResiduals(log *zap.Logger, fc filecache.FileCache, sp *config.Splits
 	}
 	if fail {
 		return errors.New("errors detected during computation of split residuals")
-	}
-
-	for _, s := range sp.Splits {
-		if err := computeDependencies(log, fc, sp, s); err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -75,7 +70,7 @@ type analysis struct {
 	imports map[string]string
 }
 
-func (az *analyser) analyseSplit(a *analysis) ([]residualError, error) {
+func (az *analyser) analyseSplitAPI(a *analysis) ([]residualError, error) {
 	var analysisErrs []residualError
 
 	az.log.Debug("Analysing split.", zap.String("split", a.split.Name))

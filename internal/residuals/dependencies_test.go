@@ -131,7 +131,7 @@ func TestResolveImportsAndResiduals(t *testing.T) {
 				Files: map[string]bool{"file.go": true},
 			}}
 
-			err = computeDependencies(testlib.NewTestLogger(), fc, sp, s)
+			err = computeSplitResiduals(testlib.NewTestLogger(), fc, sp, s)
 			testlib.NoError(t, true, err)
 			testlib.Equal(t, false, tc.expectedResidualFiles, s.ResidualFiles)
 			testlib.Equal(t, false, tc.expectedResiduals, s.Residuals)
