@@ -50,7 +50,7 @@ func CreateSplitModules(log *zap.Logger, fc filecache.FileCache, sp *config.Spli
 	}
 
 	for sn := range sp.Splits {
-		if err := r.createSplitModule(sp.Splits[sn], map[string]bool{}, []string{sn}); err != nil {
+		if err = r.createSplitModule(sp.Splits[sn], []string{sn}); err != nil {
 			return err
 		}
 	}
@@ -66,6 +66,7 @@ type resolver struct {
 	localProxy string
 	done       map[string]bool
 	todo       map[string]bool
+	transDeps  map[string]map[string]bool
 }
 
 func setupResolver(log *zap.Logger, fc filecache.FileCache, sp *config.Splits) (*resolver, error) {
@@ -106,16 +107,17 @@ func setupResolver(log *zap.Logger, fc filecache.FileCache, sp *config.Splits) (
 		localProxy: lpp,
 		done:       map[string]bool{},
 		todo:       map[string]bool{},
+		transDeps:  map[string]map[string]bool{},
 	}, nil
 }
 
 const tempReplaceMarker = "// modularise"
 
-func (r *resolver) createSplitModule(s *config.Split, deps map[string]bool, stack []string) error {
-	// Prevent double-processing and detect circular dependencies between splits.
+func (r *resolver) createSplitModule(s *config.Split, stack []string) error {
 	if r.done[s.Name] {
 		return nil
 	} else if r.todo[s.Name] {
+		// Circular dependencies should have already been detected in the API analysis.
 		r.log.Error("A circular dependency exists between the configured splits. This is not allowed.", zap.Strings("split-stack", stack))
 		return errors.New("circular split dependency found")
 	}
@@ -126,14 +128,18 @@ func (r *resolver) createSplitModule(s *config.Split, deps map[string]bool, stac
 	}()
 
 	// Process upstream splits first.
+	r.transDeps[s.Name] = map[string]bool{}
 	for sn := range s.SplitDeps {
-		if err := r.createSplitModule(r.sp.Splits[sn], deps, append(stack, sn)); err != nil {
+		if err := r.createSplitModule(r.sp.Splits[sn], append(stack, sn)); err != nil {
 			return err
 		}
-		deps[sn] = true
+		r.transDeps[s.Name][sn] = true
+		for tsn := range r.transDeps[sn] {
+			r.transDeps[s.Name][tsn] = true
+		}
 	}
 
-	if err := r.initSplitModule(s, deps); err != nil {
+	if err := r.initSplitModule(s); err != nil {
 		return err
 	}
 	if err := r.resolveSplitDeps(s); err != nil {
@@ -145,7 +151,7 @@ func (r *resolver) createSplitModule(s *config.Split, deps map[string]bool, stac
 	return nil
 }
 
-func (r *resolver) initSplitModule(s *config.Split, deps map[string]bool) error {
+func (r *resolver) initSplitModule(s *config.Split) error {
 	modFile := filepath.Join(s.WorkDir, "go.mod")
 	if !r.sp.NonModuleSource {
 		// We need to change the module path in the source project's go.mod file before writing it to
@@ -160,7 +166,7 @@ func (r *resolver) initSplitModule(s *config.Split, deps map[string]bool) error 
 			}
 
 			var skip bool
-			for sn := range s.SplitDeps {
+			for sn := range r.transDeps[s.Name] {
 				if strings.Contains(strings.SplitAfter(l, "//")[0], r.sp.Splits[sn].ModulePath) {
 					skip = true
 					break
@@ -194,7 +200,7 @@ func (r *resolver) initSplitModule(s *config.Split, deps map[string]bool) error 
 		r.log.Error("Failed to open go.mod file.", zap.String("file", modFile), zap.Error(err))
 		return err
 	}
-	for sn := range deps {
+	for sn := range r.transDeps[s.Name] {
 		r.log.Debug(
 			"Adding a temporary 'require' statement for a dependency on split.",
 			zap.String("target-split", sn),

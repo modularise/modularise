@@ -36,7 +36,7 @@ type DataSplit struct {
 	Root string
 	// New virtual root relative to the root of the source module for residual packages of the split's module.
 	ResidualsRoot string
-	// Name of splits of which this split imports Go packages.
+	// Names of splits of which this split directly imports Go packages.
 	SplitDeps map[string]bool
 	// New pseudo-version for the content of this split.
 	Version string

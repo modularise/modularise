@@ -18,7 +18,6 @@ func (r *resolver) resolveSplitDeps(s *config.Split) error {
 	if err := r.cleanupGoMod(s); err != nil {
 		return err
 	}
-
 	if err := r.commitChanges(s); err != nil {
 		return err
 	}
@@ -72,7 +71,7 @@ func (r *resolver) cleanupGoMod(s *config.Split) error {
 	}
 
 	var splitPaths []string
-	for sn := range s.SplitDeps {
+	for sn := range r.transDeps[s.Name] {
 		splitPaths = append(splitPaths, r.sp.Splits[sn].ModulePath)
 	}
 

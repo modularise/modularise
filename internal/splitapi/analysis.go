@@ -55,6 +55,10 @@ func AnalyseAPI(log *zap.Logger, fc filecache.FileCache, sp *config.Splits) erro
 	if fail {
 		return errors.New("errors detected during computation of split residuals")
 	}
+
+	if err := a.analyseSplitDepGraph(); err != nil {
+		return err
+	}
 	return nil
 }
 
