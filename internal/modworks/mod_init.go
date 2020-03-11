@@ -152,8 +152,25 @@ func (r *resolver) initSplitModule(s *config.Split, deps map[string]bool) error 
 		// the split's working directory. We also need to add temporary local 'replace' statements for
 		// each of the splits in the transitive dependency set of the current one.
 		r.log.Debug("Copying over source 'go.mod' to split.", zap.String("file", modFile))
-		content := strings.Replace(r.mod, fmt.Sprintf("module %s", r.fc.ModulePath()), fmt.Sprintf("module %s", s.ModulePath), 1)
-		if err := ioutil.WriteFile(modFile, []byte(content), 0644); err != nil {
+		var newContent []string
+		for _, l := range strings.Split(r.mod, "\n") {
+			if l == fmt.Sprintf("module %s", r.fc.ModulePath()) {
+				newContent = append(newContent, fmt.Sprintf("module %s", s.ModulePath))
+				continue
+			}
+
+			var skip bool
+			for sn := range s.SplitDeps {
+				if strings.Contains(strings.SplitAfter(l, "//")[0], r.sp.Splits[sn].ModulePath) {
+					skip = true
+					break
+				}
+			}
+			if !skip {
+				newContent = append(newContent, l)
+			}
+		}
+		if err := ioutil.WriteFile(modFile, []byte(strings.Join(newContent, "\n")), 0644); err != nil {
 			r.log.Error("Failed to write go.mod.", zap.String("file", modFile), zap.Error(err))
 			return err
 		}
