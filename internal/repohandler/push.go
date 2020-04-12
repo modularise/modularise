@@ -34,7 +34,8 @@ func PushSplits(log *zap.Logger, sp *modularise_config.Splits) error {
 			continue
 		}
 
-		if err = s.Repo.Push(&git.PushOptions{Auth: auth}); err != nil {
+		err = s.Repo.Push(&git.PushOptions{Auth: auth})
+		if err != nil && err != git.NoErrAlreadyUpToDate {
 			log.Error("Failed to push new split content to remote.", zap.String("directory", s.WorkDir), zap.String("url", s.URL))
 			return err
 		}
