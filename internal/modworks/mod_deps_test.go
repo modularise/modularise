@@ -119,7 +119,7 @@ func TestLocalProxy(t *testing.T) {
 		"GODEBUG=", // Don't pass any debug options to the lower-level invocation.
 		fmt.Sprintf("GOPATH=%s", gopath),
 		fmt.Sprintf("GOPROXY=file://%s", proxyPath),
-		fmt.Sprintf("GOSUMDB=off"),
+		"GOSUMDB=off",
 	)
 
 	out, err := cmd.CombinedOutput()

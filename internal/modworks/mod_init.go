@@ -216,11 +216,6 @@ func (r *resolver) initSplitModule(s *config.Split) error {
 
 	// Clean up the split's 'go.mod' to remove any unnecessary dependencies copied over from the
 	// source project.
-	var splitPaths []string
-	for sn := range s.SplitDeps {
-		splitPaths = append(splitPaths, r.sp.Splits[sn].ModulePath)
-	}
-
 	cmd := exec.Command("go", "mod", "tidy")
 	cmd.Dir = s.WorkDir
 	cmd.Env = append(os.Environ(), "GODEBUG=") // Don't pass any debug options to the lower-level invocation.
