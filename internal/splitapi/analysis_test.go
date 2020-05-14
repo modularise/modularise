@@ -147,8 +147,8 @@ var MyVar pkg.ExportedType
 			t.Parallel()
 
 			fc, err := testcache.NewFakeFileCache("", map[string]testcache.FakeFileCacheEntry{
-				"go.mod": testcache.FakeFileCacheEntry{Data: []byte("module example.com/pkg")},
-				"lib.go": testcache.FakeFileCacheEntry{Data: []byte("package pkg\n")},
+				"go.mod": {Data: []byte("module example.com/pkg")},
+				"lib.go": {Data: []byte("package pkg\n")},
 			})
 			testlib.NoError(t, true, err)
 
@@ -239,8 +239,8 @@ func TestType(t *testing.T) {
 			t.Parallel()
 
 			fc, err := testcache.NewFakeFileCache("", map[string]testcache.FakeFileCacheEntry{
-				"go.mod": testcache.FakeFileCacheEntry{Data: []byte("module example.com/pkg")},
-				"lib.go": testcache.FakeFileCacheEntry{Data: []byte("package pkg\n")},
+				"go.mod": {Data: []byte("module example.com/pkg")},
+				"lib.go": {Data: []byte("package pkg\n")},
 			})
 			testlib.NoError(t, true, err)
 

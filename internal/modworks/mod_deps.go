@@ -66,7 +66,7 @@ func (r *resolver) cleanupGoMod(s *config.Split) error {
 	cmd.Env = append(os.Environ(), "GODEBUG=") // Don't pass any debug options to the lower-level invocation.
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		r.log.Error("Failed to determine current GORPOXY value via 'go env'.", zap.Error(err))
+		r.log.Error("Failed to determine current GORPOXY value via 'go env'.", zap.Error(err), zap.String("output", string(out)))
 		return err
 	}
 

@@ -221,7 +221,7 @@ func BenchmarkReadGoFile(b *testing.B) {
 		}
 		tfs[f] = true
 	}
-	if len(tfs) <= 0 {
+	if len(tfs) == 0 {
 		b.FailNow()
 	}
 

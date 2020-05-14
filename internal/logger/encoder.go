@@ -38,16 +38,19 @@ func (c modulariseEncoder) EncodeEntry(ent zapcore.Entry, fields []zapcore.Field
 		fmt.Fprint(line, arr.elems[i])
 	}
 
-	if b, err := c.Encoder.EncodeEntry(zapcore.Entry{}, fields); err != nil {
+	b, err := c.Encoder.EncodeEntry(zapcore.Entry{}, fields)
+	switch {
+	case err != nil:
 		return nil, err
-	} else if b.Len() > 0 {
+	case b.Len() > 0:
 		line.AppendByte(' ')
 		if _, err = line.Write(b.Bytes()); err != nil {
 			return nil, err
 		}
-	} else {
+	default:
 		line.AppendString("\n")
 	}
+
 	return line, nil
 }
 

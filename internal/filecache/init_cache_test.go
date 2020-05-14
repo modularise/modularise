@@ -15,7 +15,7 @@ import (
 	"github.com/modularise/modularise/internal/testlib"
 )
 
-func testFileCache(t *testing.T, cacheType Type, a *txtar.Archive) (cache FileCache, cleanup func()) {
+func testFileCache(t *testing.T, cacheType Type, a *txtar.Archive) (newCache FileCache, cleanup func()) {
 	switch cacheType {
 	case Cache:
 		return testCache(t, a)
@@ -47,7 +47,7 @@ func testTestCache(t *testing.T, a *txtar.Archive) (*testcache.FakeFileCache, fu
 	return c, func() {}
 }
 
-func benchmarkFileCache(b *testing.B, cacheType Type, a *txtar.Archive) (cache FileCache, cleanup func()) {
+func benchmarkFileCache(b *testing.B, cacheType Type, a *txtar.Archive) (newCache FileCache, cleanup func()) {
 	switch cacheType {
 	case Cache:
 		return benchmarkCache(b, a)
