@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"go.uber.org/zap"
 	"golang.org/x/mod/semver"
-	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
 
 	"github.com/modularise/modularise/cmd/config"
 )

@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/go-git/go-git/v5"
 	"go.uber.org/zap"
-	"gopkg.in/src-d/go-git.v4"
 
 	"github.com/modularise/modularise/cmd/config"
 )
