@@ -1,6 +1,15 @@
 -- go.mod --
 module test.com/conflicting/residuals
 
+-- .modularise.yaml --
+splits:
+  one:
+    includes:
+      - one
+  two:
+    includes:
+      - two
+
 -- internal/shared/shared.go --
 package shared
 

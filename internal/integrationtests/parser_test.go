@@ -39,7 +39,7 @@ type resultSpec struct {
 func TestIntegration_Parse(t *testing.T) {
 	t.Parallel()
 
-	tcs, err := filepath.Glob("_test_scenarios/*.txtar")
+	tcs, err := filepath.Glob("testdata/*.txtar")
 	testlib.NoError(t, true, err)
 	t.Logf("Found the following test scenarios: %v", tcs)
 
@@ -88,10 +88,7 @@ func (s *testSpec) setup() {
 }
 
 func (s *testSpec) run() {
-	err := os.Chdir(s.workDir)
-	testlib.NoError(s.t, true, err)
-
-	r, err := ioutil.ReadFile(".modularise.yaml")
+	r, err := ioutil.ReadFile(filepath.Join(s.workDir, ".modularise.yaml"))
 	testlib.NoError(s.t, true, err)
 
 	var sp config.Splits
