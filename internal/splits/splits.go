@@ -1,7 +1,7 @@
 package splits
 
 import (
-	"gopkg.in/src-d/go-git.v4"
+	"github.com/go-git/go-git/v5"
 )
 
 // DataSplits contains information that is not part of the configuration of the splits but which is

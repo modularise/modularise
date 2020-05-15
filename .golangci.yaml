@@ -78,6 +78,11 @@ linters-settings:
     # minimal occurrences count to trigger, 3 by default
     min-occurrences: 5
 
+  lll:
+    # max line length, lines longer will be reported. Default is 120.
+    # '\t' is counted as 1 character by default, and can be changed with the tab-width option
+    line-length: 150
+
   nakedret:
     # make an issue if func has more lines of code than this setting and it has naked returns; default is 30
     max-func-lines: 0 # Warn on all naked returns.

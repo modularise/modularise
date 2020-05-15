@@ -12,9 +12,10 @@ import (
 	"regexp"
 	"strings"
 
+	"go.uber.org/zap"
+
 	"github.com/modularise/modularise/cmd/config"
 	"github.com/modularise/modularise/internal/filecache"
-	"go.uber.org/zap"
 )
 
 // CleaveSplits will create the content of the configured splits in their respective working

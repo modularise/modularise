@@ -3,8 +3,8 @@ package repohandler
 import (
 	"fmt"
 
+	"github.com/go-git/go-git/v5"
 	"go.uber.org/zap"
-	"gopkg.in/src-d/go-git.v4"
 
 	modularise_config "github.com/modularise/modularise/cmd/config"
 )

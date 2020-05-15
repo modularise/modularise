@@ -6,14 +6,14 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/go-git/go-billy/v5/osfs"
+	"github.com/go-git/go-git/v5"
+	gitconfig "github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/cache"
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/storage/filesystem"
 	"go.uber.org/zap"
-	"gopkg.in/src-d/go-billy.v4/osfs"
-	"gopkg.in/src-d/go-git.v4"
-	gitconfig "gopkg.in/src-d/go-git.v4/config"
-	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/cache"
-	"gopkg.in/src-d/go-git.v4/plumbing/transport"
-	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 
 	"github.com/modularise/modularise/cmd/config"
 )

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"gopkg.in/src-d/go-git.v4"
+	"github.com/go-git/go-git/v5"
 
 	"github.com/modularise/modularise/cmd/config"
 	"github.com/modularise/modularise/internal/splits"
