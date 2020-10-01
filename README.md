@@ -207,7 +207,7 @@ are on purpose done manually.
 
   You can read the [technical design document] for `modularise` to find out.
 
-  [technical design document]: ./docs/design/technical_breakdown
+  [technical design document]: ./docs/design/technical_breakdown.md
 
 * **Does `modularise` enable two-way migrations between splits and independent projects?**
 
